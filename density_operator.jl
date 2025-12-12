@@ -197,29 +197,29 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
 
     # Calculate Cb based on dmj value
     if dmj == 1
-        Ca₁ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
-        Cb = Ca₁*Ca₂*Ca₃*Ca₄
+        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb = Cb₁*Cb₂*Cb₃*Cb₄
     elseif dmj == 2
-        Ca₁ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
-        Cb = Ca₁*Ca₂*Ca₃*Ca₄
+        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb = Cb₁*Cb₂*Cb₃*Cb₄
     elseif dmj == 3
-        Ca₁ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
-        Cb = Ca₁*Ca₂*Ca₃*Ca₄
+        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb = Cb₁*Cb₂*Cb₃*Cb₄
     elseif dmj == 4
-        Ca₁ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
-        Cb = Ca₁*Ca₂*Ca₃*Ca₄
+        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb = Cb₁*Cb₂*Cb₃*Cb₄
     else
         Cb = 1
     end
