@@ -2,13 +2,13 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "6d166c502ae024812c23b76fc2714a7a9eb21cb8"
+project_hash = "508555fdf9c5f86de6cfa375d7f8e63b3adab459"
 
 [[deps.AbstractAlgebra]]
 deps = ["LinearAlgebra", "MacroTools", "Preferences", "Random", "RandomExtensions", "SparseArrays"]
-git-tree-sha1 = "0f45b2062ea8e56c0c0475b6742941857e21506a"
+git-tree-sha1 = "399e7d3181001ef0c2ac11cd5101c36dcd6840d9"
 uuid = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
-version = "0.47.4"
+version = "0.47.6"
 
     [deps.AbstractAlgebra.extensions]
     TestExt = "Test"
@@ -100,9 +100,9 @@ version = "0.5.16"
 
 [[deps.Nemo]]
 deps = ["AbstractAlgebra", "FLINT_jll", "LinearAlgebra", "Random", "RandomExtensions", "SHA"]
-git-tree-sha1 = "9316999751b9f10a4e5c3e84424d2ac21bf01016"
+git-tree-sha1 = "f230f36bf86e61e47f4fe0100f101512471f7c22"
 uuid = "2edaba10-b0f1-5616-af89-8c11ac63239a"
-version = "0.53.0"
+version = "0.53.1"
 
 [[deps.OpenBLAS32_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl"]
