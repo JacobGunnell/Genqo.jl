@@ -4,6 +4,7 @@ module zalm
 
 using DocStringExtensions
 using BlockDiagonals
+using BlockArrays
 using Nemo
 using LinearAlgebra
 
@@ -62,6 +63,29 @@ function covariance_matrix(mean_photon::Float64)
     return S46 * S35 * covar_qqpp * S35' * S46'
 end
 covariance_matrix(zalm::ZALM) = covariance_matrix(zalm.mean_photon)
+
+"""
+$TYPEDSIGNATURES
+
+Calculate the K function portion of the A matrix for the single-mode ZALM source.
+"""
+function k_function_matrix(covariance_matrix::Matrix{Float64})
+    Γ = covariance_matrix + (1/2)*I
+    sz = size(Γ)[1] ÷ 2
+    Γinv = BlockArray(inv(Γ), [sz,sz], [sz,sz])
+
+    A = Γinv[Block(1,1)]
+    C = Γinv[Block(1,2)]
+    Cᵀ = Γinv[Block(2,1)]
+    B = Γinv[Block(2,2)]
+
+    BB = (1/2)*mortar(reshape([
+        A+(im/2)*(C+Cᵀ), C-(im/2)*(A-B),
+        Cᵀ-(im/2)*(A-B), B-(im/2)*(C+Cᵀ)
+    ], 2, 2))
+
+    return BlockDiagonal([BB, conj(BB)])
+end
 
 function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     mds = 8 # Number of modes for our system
