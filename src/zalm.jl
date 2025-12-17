@@ -86,6 +86,28 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
 
     return BlockDiagonal([BB, conj(BB)])
 end
+k_function_matrix(zalm::ZALM) = k_function_matrix(covariance_matrix(zalm))
+
+"""
+$TYPEDSIGNATURES
+
+Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
+"""
+function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+    # TODO: find out from Gabe why we have a different loss_bsm_matrix function for fidelity, generation probability, etc.
+    G = Matrix{ComplexF64}(undef, 32, 32)
+    η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
+
+    for i in 1:8
+        G[i, i+16] = (η[i] - 1)
+        G[i, i+24] = -im*(η[i] - 1)
+        G[i+16, i+8] = im*(η[i] - 1)
+        G[i+24, i+8] = (η[i] - 1)
+    end
+
+    return (G + G' + I) / 2
+end
+loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     mds = 8 # Number of modes for our system
@@ -108,32 +130,32 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
         push!(β, (qbi[j] - I * pbi[j]) / sqrt(2))
     end
 
-    ηᵛ = [ηᵗ*ηᵈ ηᵗ*ηᵈ ηᵇ ηᵇ ηᵇ ηᵇ ηᵗ*ηᵈ ηᵗ*ηᵈ]
+    η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
     # Calculate Ca based on dmi value
     if dmi == 1
-        Ca₁ = ((α[1]*sqrt(ηᵛ[1]) - α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((α[1]*sqrt(ηᵛ[1]) + α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((α[7]*sqrt(ηᵛ[7]) - α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((α[7]*sqrt(ηᵛ[7]) + α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Ca₁ = ((α[1]*sqrt(η[1]) - α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Ca₂ = ((α[1]*sqrt(η[1]) + α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Ca₃ = ((α[7]*sqrt(η[7]) - α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Ca₄ = ((α[7]*sqrt(η[7]) + α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Ca = Ca₁*Ca₂*Ca₃*Ca₄
     elseif dmi == 2
-        Ca₁ = ((α[1]*sqrt(ηᵛ[1]) - α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((α[1]*sqrt(ηᵛ[1]) + α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((α[7]*sqrt(ηᵛ[7]) + α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((α[7]*sqrt(ηᵛ[7]) - α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Ca₁ = ((α[1]*sqrt(η[1]) - α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Ca₂ = ((α[1]*sqrt(η[1]) + α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Ca₃ = ((α[7]*sqrt(η[7]) + α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Ca₄ = ((α[7]*sqrt(η[7]) - α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Ca = Ca₁*Ca₂*Ca₃*Ca₄
     elseif dmi == 3
-        Ca₁ = ((α[1]*sqrt(ηᵛ[1]) + α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((α[1]*sqrt(ηᵛ[1]) - α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((α[7]*sqrt(ηᵛ[7]) - α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((α[7]*sqrt(ηᵛ[7]) + α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Ca₁ = ((α[1]*sqrt(η[1]) + α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Ca₂ = ((α[1]*sqrt(η[1]) - α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Ca₃ = ((α[7]*sqrt(η[7]) - α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Ca₄ = ((α[7]*sqrt(η[7]) + α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Ca = Ca₁*Ca₂*Ca₃*Ca₄
     elseif dmi == 4
-        Ca₁ = ((α[1]*sqrt(ηᵛ[1]) + α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Ca₂ = ((α[1]*sqrt(ηᵛ[1]) - α[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Ca₃ = ((α[7]*sqrt(ηᵛ[7]) + α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Ca₄ = ((α[7]*sqrt(ηᵛ[7]) - α[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Ca₁ = ((α[1]*sqrt(η[1]) + α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Ca₂ = ((α[1]*sqrt(η[1]) - α[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Ca₃ = ((α[7]*sqrt(η[7]) + α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Ca₄ = ((α[7]*sqrt(η[7]) - α[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Ca = Ca₁*Ca₂*Ca₃*Ca₄
     else
         Ca = 1
@@ -141,38 +163,38 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
 
     # Calculate Cb based on dmj value
     if dmj == 1
-        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb₁ = ((β[1]*sqrt(η[1]) - β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(η[1]) + β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(η[7]) - β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(η[7]) + β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Cb = Cb₁*Cb₂*Cb₃*Cb₄
     elseif dmj == 2
-        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb₁ = ((β[1]*sqrt(η[1]) - β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(η[1]) + β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(η[7]) + β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(η[7]) - β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Cb = Cb₁*Cb₂*Cb₃*Cb₄
     elseif dmj == 3
-        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb₁ = ((β[1]*sqrt(η[1]) + β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(η[1]) - β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(η[7]) - β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(η[7]) + β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Cb = Cb₁*Cb₂*Cb₃*Cb₄
     elseif dmj == 4
-        Cb₁ = ((β[1]*sqrt(ηᵛ[1]) + β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[1])
-        Cb₂ = ((β[1]*sqrt(ηᵛ[1]) - β[2]*sqrt(ηᵛ[2])) * (1/sqrt(2)))^(nvec[2])
-        Cb₃ = ((β[7]*sqrt(ηᵛ[7]) + β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[7])
-        Cb₄ = ((β[7]*sqrt(ηᵛ[7]) - β[8]*sqrt(ηᵛ[8])) * (1/sqrt(2)))^(nvec[8])
+        Cb₁ = ((β[1]*sqrt(η[1]) + β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[1])
+        Cb₂ = ((β[1]*sqrt(η[1]) - β[2]*sqrt(η[2])) * (1/sqrt(2)))^(nvec[2])
+        Cb₃ = ((β[7]*sqrt(η[7]) + β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[7])
+        Cb₄ = ((β[7]*sqrt(η[7]) - β[8]*sqrt(η[8])) * (1/sqrt(2)))^(nvec[8])
         Cb = Cb₁*Cb₂*Cb₃*Cb₄
     else
         Cb = 1
     end
 
     # Calculate Cd terms
-    Cd₃ = (α[3]*β[3]*ηᵛ[3])^(nvec[3])/factorial(nvec[3])
-    Cd₄ = (α[4]*β[4]*ηᵛ[4])^(nvec[4])/factorial(nvec[4])
-    Cd₅ = (α[5]*β[5]*ηᵛ[5])^(nvec[5])/factorial(nvec[5])
-    Cd₆ = (α[6]*β[6]*ηᵛ[6])^(nvec[6])/factorial(nvec[6])
+    Cd₃ = (α[3]*β[3]*η[3])^(nvec[3])/factorial(nvec[3])
+    Cd₄ = (α[4]*β[4]*η[4])^(nvec[4])/factorial(nvec[4])
+    Cd₅ = (α[5]*β[5]*η[5])^(nvec[5])/factorial(nvec[5])
+    Cd₆ = (α[6]*β[6]*η[6])^(nvec[6])/factorial(nvec[6])
     C = Cd₃*Cd₄*Cd₅*Cd₆*Ca*Cb
 
     # Sum over wick partitions
@@ -185,16 +207,16 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
 end
 
 # Calculate density operator
-function density_operator(nvec)
+function density_operator(zalm::ZALM, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
-    nA = k_function_matrix() + loss_bsm_matrix()
+    nA = k_function_matrix(zalm) + loss_bsm_matrix_fid(zalm)
     nAnv = inv(nA)
 
     D1 = sqrt(det(nA))
-    D2 = det(Gam)^0.25
-    D3 = det(conj(Gam))^0.25
-    Coef = 1/(D1 * D2 * D3)
+    D2 = det(Gam)^(1/4)
+    D3 = det(conj(Gam))^(1/4)
+    Coef = 1/(D1*D2*D3)
 
     for i in 1:lmat
         for j in 1:lmat
