@@ -1,3 +1,5 @@
+# Original proof of concept implementing calculate_density_operator
+
 using Nemo
 using LinearAlgebra
 using BenchmarkTools
@@ -261,5 +263,5 @@ function density_operator(nvec)
     return Coef * mat
 end
 
-#@benchmark density_operator([1 0 1 1 0 0 1 0])
-density_operator([1 0 1 1 0 0 1 0])
+@benchmark density_operator([1 0 1 1 0 0 1 0])
+#density_operator([1 0 1 1 0 0 1 0])
