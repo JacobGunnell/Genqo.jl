@@ -133,17 +133,13 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     _pbi = ["pb$i" for i in 1:mds]
     all_qps = hcat(_qai, _pai, _qbi, _pbi)
     CC = ComplexField()
-    I = onei(CC) # Imaginary unit in CC ring
+    i = onei(CC) # Imaginary unit in CC ring
     R, generators = polynomial_ring(CC, all_qps)
     (qai, pai, qbi, pbi) = (generators[:,i] for i in 1:mds)
     
     # Define the alpha and beta vectors
-    α = []
-    β = []
-    for j in 1:mds
-        push!(α, (qai[j] + I * pai[j]) / sqrt(2))
-        push!(β, (qbi[j] - I * pbi[j]) / sqrt(2))
-    end
+    α = (qai[1:mds] + i .* pai[1:mds]) / sqrt(2)
+    β = (qbi[1:mds] - i .* pbi[1:mds]) / sqrt(2)
 
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
