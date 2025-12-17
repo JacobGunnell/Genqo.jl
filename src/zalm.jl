@@ -138,8 +138,8 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     (qai, pai, qbi, pbi) = (generators[:,i] for i in 1:mds)
     
     # Define the alpha and beta vectors
-    α = (qai[1:mds] + i .* pai[1:mds]) / sqrt(2)
-    β = (qbi[1:mds] - i .* pbi[1:mds]) / sqrt(2)
+    α = (qai + i .* pai) / sqrt(2)
+    β = (qbi - i .* pbi) / sqrt(2)
 
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
