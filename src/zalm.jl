@@ -7,6 +7,7 @@ using BlockDiagonals
 using BlockArrays
 using Nemo
 using LinearAlgebra
+using Memoize
 
 import ..spdc
 import ..tools
@@ -221,6 +222,31 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     return elm
 end
 
+# Cache using module-level variables to avoid any copying
+const _cached_key = Ref{Union{Nothing, Tuple{Float64,Float64,Float64,Float64}}}(nothing)
+const _cached_nAinv = Ref{Any}(nothing)
+const _cached_Coef = Ref{ComplexF64}(0.0 + 0.0im)
+
+function _ensure_matrices_cached!(mean_photon::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+    key = (mean_photon, ηᵗ, ηᵈ, ηᵇ)
+    
+    if _cached_key[] != key
+        cov = covariance_matrix(mean_photon)
+        nA = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
+        nAinv = Matrix(inv(nA))  # Convert to regular Matrix to avoid BlockArray overhead
+        Γ = cov + (1/2)*I
+        
+        D1 = sqrt(det(nA))
+        D2 = det(Γ)^(1/4)
+        D3 = det(conj(Γ))^(1/4)
+        Coef = 1/(D1*D2*D3)
+        
+        _cached_key[] = key
+        _cached_nAinv[] = nAinv
+        _cached_Coef[] = Coef
+    end
+end
+
 """
 $TYPEDSIGNATURES
 
@@ -236,23 +262,16 @@ Output
 function density_operator(mean_photon::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
-    cov = covariance_matrix(mean_photon)
-    nA = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
-    nAinv = inv(nA)
-    Γ = cov + (1/2)*I
 
-    D1 = sqrt(det(nA))
-    D2 = det(Γ)^(1/4)
-    D3 = det(conj(Γ))^(1/4)
-    Coef = 1/(D1*D2*D3)
+    _ensure_matrices_cached!(mean_photon, ηᵗ, ηᵈ, ηᵇ)
 
     for i in 1:lmat
         for j in 1:lmat
-            mat[i,j] = dmijZ(i, j, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
+            mat[i,j] = dmijZ(i, j, _cached_nAinv[], nvec, ηᵗ, ηᵈ, ηᵇ)
         end
     end
 
-    return Coef * mat
+    return _cached_Coef[] * mat
 end
 density_operator(zalm::ZALM, nvec::Vector{Int}) = density_operator(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
 

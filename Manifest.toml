@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "0a501035fec4eb9f293c7656c576ddda8f522ee7"
+project_hash = "08633609b3edb8fe5a25684e01aa4a052d3e2015"
 
 [[deps.AbstractAlgebra]]
 deps = ["LinearAlgebra", "MacroTools", "Preferences", "Random", "RandomExtensions", "SparseArrays"]
@@ -134,7 +134,7 @@ uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
 version = "6.3.0+2"
 
 [[deps.Genqo]]
-deps = ["BlockArrays", "BlockDiagonals", "DocStringExtensions", "LinearAlgebra", "Nemo", "Revise"]
+deps = ["BenchmarkTools", "BlockArrays", "BlockDiagonals", "DocStringExtensions", "LinearAlgebra", "Nemo", "Revise"]
 path = "."
 uuid = "4075d74c-027e-4884-b5ac-9f01362c98ed"
 version = "0.1.0"
@@ -221,6 +221,12 @@ version = "0.5.16"
 deps = ["Base64", "JuliaSyntaxHighlighting", "StyledStrings"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 version = "1.11.0"
+
+[[deps.Memoize]]
+deps = ["MacroTools"]
+git-tree-sha1 = "2b1dfcba103de714d31c033b5dacc2e4a12c7caa"
+uuid = "c03570c3-d221-55d1-a50c-7939bbd78826"
+version = "0.4.4"
 
 [[deps.Nemo]]
 deps = ["AbstractAlgebra", "FLINT_jll", "LinearAlgebra", "Random", "RandomExtensions", "SHA"]

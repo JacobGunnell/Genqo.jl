@@ -40,12 +40,13 @@ function _wick_partitions(n::Int)
     backtrack(collect(1:n), Tuple{Int,Int}[])
     return result
 end
-const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # Precompute for n=2,4,6,8
+#const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # Precompute for n=2,4,6,8
+const wick_partitions_8 = _wick_partitions(8)
 
 function wick_out(coef, moment_vector, Anv)
     # Iterate over Wick partitions
     coeff_sum = 0.0
-    for partition in wick_partitions[length(moment_vector)]
+    for partition in wick_partitions_8
         sum_factor = 1.0
         for (i,j) in partition
             sum_factor *= Anv[moment_vector[i], moment_vector[j]]
