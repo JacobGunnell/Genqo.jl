@@ -45,7 +45,7 @@ const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # P
 function wick_out(coef, moment_vector, Anv)
     # Iterate over Wick partitions
     coeff_sum = 0.0
-    for partition in wick_partitions_8
+    for partition in wick_partitions[length(moment_vector)]
         sum_factor = 1.0
         for (i,j) in partition
             sum_factor *= Anv[moment_vector[i], moment_vector[j]]

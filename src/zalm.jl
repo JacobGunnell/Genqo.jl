@@ -95,7 +95,7 @@ Calculate the loss portion of the A matrix, specifically when calculating the fi
 """
 function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
     # TODO: find out from Gabe why we have a different loss_bsm_matrix function for fidelity, generation probability, etc.
-    G = Matrix{ComplexF64}(undef, 32, 32)
+    G = zeros(ComplexF64, 32, 32)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
     for i in 1:8
@@ -109,6 +109,21 @@ function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 end
 loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
+"""
+$TYPEDSIGNATURES
+
+Calculate a single element of the unnormalized density matrix.
+Arguments:
+- dmi: The row number for the cooresponding density matrix element
+- dmj: The column number for the cooresponding density matrix element
+- nAinv: The numerical inverse of the A matrix
+- nvec: The vector of n_i's for the system, where n_i is the number of photons in mode i
+- ηᵗ: The transmission efficiency
+- ηᵈ: The detection efficiency
+- ηᵇ: The Bell state measurement efficiency
+Output:
+- The density matrix element for the ZALM source
+"""
 function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     mds = 8 # Number of modes for our system
 
@@ -200,31 +215,45 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     # Sum over wick partitions
     elm = 0.0
     for (mon, coeff) in zip(monomials(C), coefficients(C))
-        elm += wick_out(coeff, [i for i in 1:length(generators) if exponent(mon, 1, i) == 1], nAinv)
+        elm += tools.wick_out(coeff, [i for i in 1:length(generators) if exponent(mon, 1, i) == 1], nAinv)
     end
 
     return elm
 end
 
-# Calculate density operator
-function density_operator(zalm::ZALM, nvec::Vector{Int})
+"""
+$TYPEDSIGNATURES
+
+Calculate the density operator of the single-mode ZALM source on the spin-spin state.
+Arguments
+- ηᵗ: Outcoupling efficiency
+- ηᵈ: Detection efficiency
+- ηᵇ: Bell state measurement efficiency
+- nvec: The vector of n_i's for the system, where n_i is the number of photons in mode i
+Output
+- The numerical complete spin density matrix
+"""
+function density_operator(mean_photon::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
-    nA = k_function_matrix(zalm) + loss_bsm_matrix_fid(zalm)
-    nAnv = inv(nA)
+    cov = covariance_matrix(mean_photon)
+    nA = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
+    nAinv = inv(nA)
+    Γ = cov + (1/2)*I
 
     D1 = sqrt(det(nA))
-    D2 = det(Gam)^(1/4)
-    D3 = det(conj(Gam))^(1/4)
+    D2 = det(Γ)^(1/4)
+    D3 = det(conj(Γ))^(1/4)
     Coef = 1/(D1*D2*D3)
 
     for i in 1:lmat
         for j in 1:lmat
-            mat[i,j] = dmijZ(i, j, nAnv, nvec, outcoupling_efficiency, detection_efficiency, bsm_efficiency)
+            mat[i,j] = dmijZ(i, j, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
         end
     end
 
     return Coef * mat
 end
+density_operator(zalm::ZALM, nvec::Vector{Int}) = density_operator(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
 
 end # module
