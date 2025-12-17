@@ -84,7 +84,7 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
         Cᵀ-(im/2)*(A-B), B-(im/2)*(C+Cᵀ)
     ], 2, 2))
 
-    return BlockDiagonal([BB, conj(BB)])
+    return Matrix(BlockDiagonal([BB, conj(BB)]))
 end
 k_function_matrix(zalm::ZALM) = k_function_matrix(covariance_matrix(zalm))
 
