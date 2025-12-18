@@ -1,30 +1,6 @@
-# =========================
-# calculate_fidelity.jl
-# =========================
-# Purpose:
-#   Isolated port of the Python method `calculate_fidelity(self)` into Julia.
-#
-# Philosophy:
-#   - Keep this file mostly comments and scaffolding so you can fill in the gaps.
-#   - Keep dependencies as stubs/placeholders you will rewrite next.
-#   - Avoid “big architecture decisions” for now.
-#
-# NOTE:
-#   You can include this file from a larger project later via:
-#     include("calculate_fidelity.jl")
-#   and then call calculate_fidelity!(model)
+using LinearAlgebra 
 
-using LinearAlgebra  # det, sqrt, etc.
-
-# =========================
-# 1- Minimal model (replacement for `self`)
-# =========================
-# In Python we have:
-#   self.params   : dict
-#   self.results  : dict
-#   self.basisv   : basis representation
-#
-# Start simple: Dicts everywhere. Later you can replace Dicts with typed fields.
+# temporary hard-coded matrices for testing
 k_function_matrix = [
     5.00000000e-01+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  -1.11747539e-02+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  1.11747539e-02+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+1.11747539e-02im  0.00000000e+00+0.00000000e+00im  0.00000000e+00-1.11747539e-02im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im;
     0.00000000e+00+0.00000000e+00im  5.00000000e-01+0.00000000e+00im  -1.11747539e-02+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  1.11747539e-02+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+1.11747539e-02im  0.00000000e+00+0.00000000e+00im  0.00000000e+00-1.11747539e-02im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im  0.00000000e+00+0.00000000e+00im;
@@ -113,14 +89,43 @@ Gam = [
     0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00  -2.23718573e-02  0.00000000e+00  -2.23718573e-02  0.00000000e+00  0.00000000e+00  1.00100000e+00
 ]
 
-mutable struct Model
-    params::Dict{String, Any}
+# =========================
+# 1- Model (replacement for self in ZALM init)
+# =========================
+
+mutable struct FidelityCalc
+    params
+    basisv
+    status::Int
     results::Dict{String, Any}
-    basisv::Any
+
+    function FidelityCalc(param = TYP_PARAMS)
+        params = param
+        basisv = ZALM.basisvZ(8)
+        status = 0
+
+        results = Dict{String, Any}(
+            "covariance_matrix" => nothing,
+            "k_function_matrix" => nothing,
+            "loss_bsm_matrix" => nothing,
+            "bsm_matrix" => nothing,
+            "output_state" => nothing,
+            "output_state_basis" => nothing,
+            "fidelity" => nothing,
+            "hashing_bound" => nothing,
+            "probability_success" => nothing,
+            "Gamma" => nothing,
+            "density_matrix" => nothing,
+            "density_matrix_post_bsm" => nothing,
+            "fock_pgen" => nothing,
+        )
+
+        new(params, basisv, status, results)
+    end
 end
 
 # =========================
-# 2- Dependencies 
+# 2- Dependencies (forthcoming)
 # =========================
 
 # ---- SPDC.moment_vector([1], k) ----
@@ -165,13 +170,14 @@ end
 #   - use ! because we mutate m.results
 #   - return the computed value too
 function calculate_fidelity!(m::Model)
-    # Python: Cn1 = SPDC.moment_vector([1], 1) etc.
+    # Python: Cn1 = SPDC.moment_vector([1], 1)
     Cn1 = moment_vector([1], 1)
     Cn2 = moment_vector([1], 2)
     Cn3 = moment_vector([1], 3)
     Cn4 = moment_vector([1], 4)
 
-    # Values hardcoded for testing purposes. We will remove them when dependencies are ported.
+    # Matrix values hardcoded for testing purposes. We will remove them when dependencies are ported.
+
     # calculate_loss_matrix_fid!(m)
     # calculate_k_function_matrix!(m)
     k_mat = k_function_matrix # m.results["k_function_matrix"]
@@ -187,11 +193,10 @@ function calculate_fidelity!(m::Model)
     F4 = W(Cn4, nA1, m.basisv)
 
     # ---- Parameters ----
-    # Python:
-    #   N1 = ((detection_efficiency**2)*(outcoupling_efficiency**2))**2
-    det_eff = m.params["detection_efficiency"]
-    out_eff = m.params["outcoupling_efficiency"]
-    N1 = ((det_eff^2) * (out_eff^2))^2
+
+    detection_efficiency = m.params["detection_efficiency"]
+    outcoupling_efficiency = m.params["outcoupling_efficiency"]
+    N1 = ((detection_efficiency^2) * (outcoupling_efficiency^2))^2
 
     # ---- Determinant normalizations ----
     # Python:
@@ -217,10 +222,9 @@ function calculate_fidelity!(m::Model)
 end
 
 # =========================
-# 4) Optional: tiny helper constructor
+# 4) Helper constructor for testing
 # =========================
-# Use this while you’re wiring things up.
-# Fill params/results/basisv as you port dependencies.
+
 function make_model(; params=Dict{String,Any}(),
                       results=Dict{String,Any}(),
                       basisv=nothing)
