@@ -1,7 +1,5 @@
 module Genqo
 
-using Revise
-
 include("tools.jl")
 include("tmsv.jl")
 include("spdc.jl")
