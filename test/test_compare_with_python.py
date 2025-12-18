@@ -1,0 +1,45 @@
+import genqo as gqpy
+from python.genqo import *
+
+import numpy as np
+
+
+tol = 1e-8
+
+error_with_params = lambda params: f"Python-Julia comparison yielded results that do not agree for parameters:\n{'\n'.join([f'{k}={v}' for k, v in params.items()])}"
+
+def test_covariance_matrix(zalm_py: gqpy.ZALM, zalm_jl: ZALM, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        zalm_py.params.update(params)
+        zalm_py.calculate_covariance_matrix()
+        covariance_matrix_py = zalm_py.results["covariance_matrix"]
+
+        zalm_jl.set(**params)
+        covariance_matrix_jl = zalm_jl.covariance_matrix()
+
+        assert np.allclose(covariance_matrix_py, covariance_matrix_jl, atol=tol), error_with_params(params)
+
+def test_k_function_matrix(zalm_py: gqpy.ZALM, zalm_jl: ZALM, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        zalm_py.params.update(params)
+        zalm_py.run()
+        k_function_matrix_py = zalm_py.results["k_function_matrix"]
+
+        zalm_jl.set(**params)
+        k_function_matrix_jl = zalm_jl.k_function_matrix()
+
+        assert np.allclose(k_function_matrix_py, k_function_matrix_jl, atol=tol), error_with_params(params)
+
+def test_density_operator(zalm_py: gqpy.ZALM, zalm_jl: ZALM, test_cases: list[dict]) -> None:
+    nvec = [1, 0, 1, 1, 0, 0, 1, 0]
+    for params in test_cases:
+        zalm_py.params.update(params)
+        zalm_py.run()
+        zalm_py.calculate_density_operator(nvec)
+        density_operator_py = zalm_py.results["output_state"]
+
+        zalm_jl.set(**params)
+        density_operator_jl = zalm_jl.density_operator(nvec)
+
+        assert np.allclose(density_operator_py, density_operator_jl, atol=tol), error_with_params(params)
+    

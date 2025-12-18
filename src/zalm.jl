@@ -7,6 +7,7 @@ using BlockDiagonals
 using BlockArrays
 using Nemo
 using LinearAlgebra
+using PythonCall
 
 import ..spdc
 import ..tools
@@ -20,6 +21,16 @@ struct ZALM
     dark_counts::Float64
     visibility::Float64
 end
+
+ZALM(zalm_py::Py) = ZALM(
+    pyconvert(Float64, zalm_py.mean_photon),
+    pyconvert(Vector{Float64}, zalm_py.schmidt_coeffs),
+    pyconvert(Float64, zalm_py.detection_efficiency),
+    pyconvert(Float64, zalm_py.bsm_efficiency),
+    pyconvert(Float64, zalm_py.outcoupling_efficiency),
+    pyconvert(Float64, zalm_py.dark_counts),
+    pyconvert(Float64, zalm_py.visibility)
+)
 
 """
 $TYPEDSIGNATURES
