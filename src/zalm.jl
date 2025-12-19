@@ -217,7 +217,7 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     # Sum over wick partitions
     elm = 0.0
     for (mon, coeff) in zip(monomials(C), coefficients(C))
-        elm += tools.wick_out(coeff, [i for i in 1:length(generators) if exponent(mon, 1, i) == 1], nAinv)
+        elm += tools.wick_out(ComplexF64(coeff), [i for i in 1:length(generators) if exponent(mon, 1, i) == 1], nAinv)
     end
 
     return elm

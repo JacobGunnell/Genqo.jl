@@ -1,6 +1,7 @@
 module tools
 
 using LinearAlgebra
+using Debugger
 
 """
 Precompute Wick partitions (perfect pairings) of 1:n
@@ -40,12 +41,11 @@ function _wick_partitions(n::Int)
 end
 const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # Precompute for n=2,4,6,8
 
-function wick_out(coef, moment_vector, Anv)
+function wick_out(coef::ComplexF64, moment_vector::Vector{Int}, Anv::Matrix{ComplexF64})
     # Iterate over Wick partitions
-    T = promote_type(typeof(coef), eltype(Anv)) # handles complex numbers faster
-    coeff_sum = zero(T)
+    coeff_sum = zero(Float64)
     for partition in wick_partitions[length(moment_vector)]
-        sum_factor = one(T)
+        sum_factor = one(Float64)
         for (i,j) in partition
             sum_factor *= Anv[moment_vector[i], moment_vector[j]]
         end
