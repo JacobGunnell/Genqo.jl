@@ -109,7 +109,7 @@ function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
         G[i+24, i+8] = (η[i] - 1)
     end
 
-    return (G + G' + I) / 2
+    return (G + transpose(G) + I) / 2
 end
 loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
@@ -250,6 +250,8 @@ function density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Fl
     D2 = det(Γ)^(1/4)
     D3 = det(conj(Γ))^(1/4)
     Coef = 1/(D1*D2*D3)
+
+    print("$D1 $D2 $D3 $Coef")
 
     for i in 1:lmat
         for j in 1:lmat

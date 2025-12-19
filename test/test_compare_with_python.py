@@ -30,6 +30,17 @@ def test_k_function_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: l
 
         assert np.allclose(k_function_matrix_py, k_function_matrix_jl, atol=tol), error_with_params(params)
 
+def test_loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        zalm_py.params.update(params)
+        zalm_py.calculate_loss_bsm_matrix_fid()
+        loss_bsm_matrix_py = zalm_py.results["loss_bsm_matrix"]
+
+        zalm_jl.set(**params)
+        loss_bsm_matrix_jl = zalm_jl.loss_bsm_matrix_fid()
+
+        assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
+
 def test_density_operator(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     nvec = [1, 0, 1, 1, 0, 0, 1, 0]
     for params in test_cases:

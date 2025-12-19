@@ -61,6 +61,13 @@ class ZALM:
                 jl.zalm.ZALM(self)
             )
         )
+    
+    def loss_bsm_matrix_fid(self):
+        return np.asarray(
+            jl.zalm.loss_bsm_matrix_fid(
+                jl.zalm.ZALM(self)
+            )
+        )
 
     def density_operator(self, nvec):
         return np.asarray(
