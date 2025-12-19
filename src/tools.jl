@@ -40,9 +40,10 @@ const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # P
 
 function wick_out(coef, moment_vector, Anv)
     # Iterate over Wick partitions
-    coeff_sum = 0.0
+    T = promote_type(typeof(coef), eltype(Anv)) # handles complex numbers faster
+    coeff_sum = zero(T)
     for partition in wick_partitions[length(moment_vector)]
-        sum_factor = 1.0
+        sum_factor = one(T)
         for (i,j) in partition
             sum_factor *= Anv[moment_vector[i], moment_vector[j]]
         end
