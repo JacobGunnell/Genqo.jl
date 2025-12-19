@@ -245,10 +245,11 @@ function density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Fl
     nA = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
     nAinv = inv(nA)
     Γ = cov + (1/2)*I
+    detΓ = det(Γ)
 
     D1 = sqrt(det(nA))
-    D2 = det(Γ)^(1/4)
-    D3 = det(conj(Γ))^(1/4)
+    D2 = detΓ^(1/4)
+    D3 = conj(detΓ)^(1/4)
     Coef = 1/(D1*D2*D3)
 
     for i in 1:lmat
