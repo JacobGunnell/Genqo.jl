@@ -1,19 +1,19 @@
 module tmsv
 
-using DocStringExtensions
 using BlockArrays
 
 """
-$TYPEDSIGNATURES
+    covariance_matrix(μ::Float64)
 
-Construct the covariance matrix for a TMSV state
-Arguments
-    - mean_photon: The mean photon number of the TMSV state
-    Output
-    - The covariance matrix for the TMSV state, in the qpqp ordering
+Construct the covariance matrix for a TMSV state.
+
+# Parameters
+- μ : The mean photon number of the TMSV state
+
+# Returns
+The covariance matrix for the TMSV state, in the qpqp ordering
 """
-function covariance_matrix(mean_photon::Float64)
-    μ = mean_photon
+function covariance_matrix(μ::Float64)
     A = [
         1+2μ 0;
         0 1+2μ;

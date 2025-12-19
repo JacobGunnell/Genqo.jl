@@ -1,10 +1,6 @@
 module tools
 
-using DocStringExtensions
-
 """
-$TYPEDSIGNATURES
-
 Precompute Wick partitions (perfect pairings) of 1:n
 Each partition is a Vector of (i, j) pairs (as Tuples)
 """

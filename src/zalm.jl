@@ -2,7 +2,6 @@
 
 module zalm
 
-using DocStringExtensions
 using BlockDiagonals
 using BlockArrays
 using Nemo
@@ -33,14 +32,12 @@ ZALM(zalm_py::Py) = ZALM(
 )
 
 """
-$TYPEDSIGNATURES
-
 Calculate the covariance matrix of the single-mode ZALM source
 """
-function covariance_matrix(mean_photon::Float64)
+function covariance_matrix(μ::Float64)
     # Initial ZALM covariance matrix in qpqp ordering
     covar_qpqp = begin
-        spdc_covar = spdc.covariance_matrix(mean_photon)
+        spdc_covar = spdc.covariance_matrix(μ)
         BlockDiagonal([spdc_covar, spdc_covar])
     end
 
@@ -76,8 +73,6 @@ end
 covariance_matrix(zalm::ZALM) = covariance_matrix(zalm.mean_photon)
 
 """
-$TYPEDSIGNATURES
-
 Calculate the K function portion of the A matrix for the single-mode ZALM source.
 """
 function k_function_matrix(covariance_matrix::Matrix{Float64})
@@ -100,8 +95,6 @@ end
 k_function_matrix(zalm::ZALM) = k_function_matrix(covariance_matrix(zalm))
 
 """
-$TYPEDSIGNATURES
-
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
 """
 function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
@@ -121,19 +114,21 @@ end
 loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 """
-$TYPEDSIGNATURES
+    dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
 
 Calculate a single element of the unnormalized density matrix.
-Arguments:
-- dmi: The row number for the cooresponding density matrix element
-- dmj: The column number for the cooresponding density matrix element
-- nAinv: The numerical inverse of the A matrix
-- nvec: The vector of n_i's for the system, where n_i is the number of photons in mode i
-- ηᵗ: The transmission efficiency
-- ηᵈ: The detection efficiency
-- ηᵇ: The Bell state measurement efficiency
-Output:
-- The density matrix element for the ZALM source
+
+# Parameters
+- dmi   : Row number for the corresponding density matrix element
+- dmj   : Column number for the corresponding density matrix element
+- nAinv : Numerical inverse of the A matrix
+- nvec  : The vector of nᵢ's for the system, where nᵢ is the number of photons in mode i
+- ηᵗ    : Transmission efficiency
+- ηᵈ    : Detection efficiency
+- ηᵇ    : Bell state measurement efficiency
+
+# Returns
+Density matrix element for the ZALM source
 """
 function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     mds = 8 # Number of modes for our system
@@ -229,21 +224,24 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
 end
 
 """
-$TYPEDSIGNATURES
+    density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
 
 Calculate the density operator of the single-mode ZALM source on the spin-spin state.
-Arguments
-- ηᵗ: Outcoupling efficiency
-- ηᵈ: Detection efficiency
-- ηᵇ: Bell state measurement efficiency
-- nvec: The vector of n_i's for the system, where n_i is the number of photons in mode i
-Output
-- The numerical complete spin density matrix
+
+# Parameters
+- μ    : Mean photon number
+- ηᵗ   : Outcoupling efficiency
+- ηᵈ   : Detection efficiency
+- ηᵇ   : Bell state measurement efficiency
+- nvec : The vector of nᵢ's for the system, where nᵢ is the number of photons in mode i
+
+# Returns
+Numerical complete spin density matrix
 """
-function density_operator(mean_photon::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
+function density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
-    cov = covariance_matrix(mean_photon)
+    cov = covariance_matrix(μ)
     nA = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
     nAinv = inv(nA)
     Γ = cov + (1/2)*I
