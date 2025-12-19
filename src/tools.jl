@@ -42,10 +42,9 @@ const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # P
 
 function wick_out(coef, moment_vector, Anv)
     # Iterate over Wick partitions
-    T = promote_type(typeof(coef), eltype(Anv)) # handles complex numbers faster
-    coeff_sum = zero(T)
+    coeff_sum = 0
     for partition in wick_partitions[length(moment_vector)]
-        sum_factor = one(T)
+        sum_factor = 1
         for (i,j) in partition
             sum_factor *= Anv[moment_vector[i], moment_vector[j]]
         end
@@ -60,7 +59,7 @@ bv_map: Dict mapping basis symbol/Num -> index in Anv
 Returns: (coef, mv_idx::Vector{Int})
 """
 function wick_coupling_indices(term_factors, bv_map::Dict)
-    coef = one(ComplexF64)
+    coef = 1
     mv_idx = Int[]
 
     for f in term_factors
@@ -78,8 +77,7 @@ end
 
 function W(Cni, Amat, bv_map)
     Anv = inv(Amat)
-    T = promote_type(eltype(Anv), ComplexF64)
-    total = zero(T)
+    total = 0
 
     for term in Cni
         coef, mv = wick_coupling_indices(term, bv_map)
