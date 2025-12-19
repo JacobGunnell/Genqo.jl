@@ -7,14 +7,14 @@ import pytest
 @pytest.fixture
 def zalm_py():
     """Return a basic ZALM instance from the Python library for testing."""
-    import genqo as gq
-    return gq.ZALM()
+    import genqo as gqpy
+    return gqpy.ZALM()
 
 @pytest.fixture
 def zalm_jl():
     """Return a basic ZALM instance from the Julia library for testing."""
-    from python.genqo import ZALM
-    return ZALM()
+    import python.genqo as gqjl
+    return gqjl.ZALM()
 
 @pytest.fixture
 def test_cases() -> list[dict]:
