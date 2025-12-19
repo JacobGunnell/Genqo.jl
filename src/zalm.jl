@@ -251,8 +251,6 @@ function density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Fl
     D3 = det(conj(Γ))^(1/4)
     Coef = 1/(D1*D2*D3)
 
-    print("$D1 $D2 $D3 $Coef")
-
     for i in 1:lmat
         for j in 1:lmat
             mat[i,j] = dmijZ(i, j, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
