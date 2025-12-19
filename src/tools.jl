@@ -1,5 +1,7 @@
 module tools
 
+using LinearAlgebra
+
 """
 Precompute Wick partitions (perfect pairings) of 1:n
 Each partition is a Vector of (i, j) pairs (as Tuples)
@@ -51,6 +53,43 @@ function wick_out(coef, moment_vector, Anv)
     end
     return coeff_sum * coef
 end
+
+"""
+term_factors: something like a Vector of factors (numbers and symbols)
+bv_map: Dict mapping basis symbol/Num -> index in Anv
+Returns: (coef, mv_idx::Vector{Int})
+"""
+function wick_coupling_indices(term_factors, bv_map::Dict)
+    coef = one(ComplexF64)
+    mv_idx = Int[]
+
+    for f in term_factors
+        if f isa Number
+            coef *= ComplexF64(f)
+        else
+            idx = bv_map[f]
+            push!(mv_idx, idx)
+        end
+    end
+
+    return coef, mv_idx
+end
+
+
+function W(Cni, Amat, bv_map)
+    Anv = inv(Amat)
+    T = promote_type(eltype(Anv), ComplexF64)
+    total = zero(T)
+
+    for term in Cni
+        coef, mv = wick_coupling_indices(term, bv_map)
+        total += wick_out(coef, mv, Anv)
+    end
+
+    return total
+end
+
+
 
 function permutation_matrix(permutations::Vector{Int})
     n = length(permutations)
