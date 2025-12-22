@@ -1,0 +1,52 @@
+using LinearAlgebra 
+using Genqo
+using Genqo.tools: wick_out, W
+using Genqo.zalm: ZALM, loss_bsm_matrix, k_function_matrix, moment_vector # moment_vector pending
+
+
+
+# TODO: moment_vector, basisv, calculate_loss_bsm_matrix_pgen
+
+function fidelity(zalm::ZALM)
+ # Calculate the fidelity with respect to the Bell state for the photon-photon single-mode ZALM source
+    
+    # Define the matrix element
+    # Python: Cn1 = ZALM.moment_vector([1], 1)
+    Cn1 = moment_vector([1], 1)
+    Cn2 = moment_vector([1], 2)
+    Cn3 = moment_vector([1], 3)
+    Cn4 = moment_vector([1], 4)
+
+    # The loss matrix will be unique for calculating the fidelity    
+    zalm.loss_bsm_matrix_fid = loss_bsm_matrix_fid(zalm)
+    zalm.k_function_matrix = k_function_matrix(zalm)
+
+    nA1 = zalm.k_function_matrix + zalm.loss_bsm_matrix
+    Anv = inv(nA1)
+
+    # ---- Compute W terms ----
+    F1 = W(Cn1, nA1, zalm.basisv)
+    F2 = W(Cn2, nA1, zalm.basisv)
+    F3 = W(Cn3, nA1, zalm.basisv)
+    F4 = W(Cn4, nA1, zalm.basisv)
+
+    # Now calculate the trace of the state, which is equivalent to the probability of generation
+    zalm.loss_bsm_matrix = calculate_loss_bsm_matrix_pgen(zalm)
+    zalm.k_function_matrix = k_function_matrix(zalm)
+    
+    nA2 = zalm.k_function_matrix + zalm.loss_bsm_matrix
+    
+    N1 = ((zalm.detection_efficiency^2) * (zalm.outcoupling_efficiency^2))^2
+    N2 = sqrt(det(nA2))
+
+    # ---- Determinant normalizations ----
+    #   If on of the determinants is complex, sqrt and ^(0.25) use the principal complex root.
+    #   That matches NumPy broadly, but can change phase if det moves around.
+    D1 = sqrt(det(nA1))
+
+    coef = N1*N2/(2*D1)
+    Trc = W(Cn0, nA2, zalm.basisv)
+    fid = coef * (F1 + F2 + F3 + F4) / Trc
+    zalm.results["fidelity"] = fid
+    return fid
+end
