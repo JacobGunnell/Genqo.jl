@@ -1,7 +1,6 @@
 module tools
 
 using LinearAlgebra
-using Debugger
 
 """
 Precompute Wick partitions (perfect pairings) of 1:n

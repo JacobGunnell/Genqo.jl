@@ -224,7 +224,7 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
 end
 
 """
-    density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
+    spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
 
 Calculate the density operator of the single-mode ZALM source on the spin-spin state.
 
@@ -238,7 +238,7 @@ Calculate the density operator of the single-mode ZALM source on the spin-spin s
 # Returns
 Numerical complete spin density matrix
 """
-function density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
+function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
     cov = covariance_matrix(μ)
@@ -260,6 +260,6 @@ function density_operator(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Fl
 
     return Coef * mat
 end
-density_operator(zalm::ZALM, nvec::Vector{Int}) = density_operator(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
+spin_density_matrix(zalm::ZALM, nvec::Vector{Int}) = spin_density_matrix(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
 
 end # module

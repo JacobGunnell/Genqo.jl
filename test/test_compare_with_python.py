@@ -41,16 +41,14 @@ def test_loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases:
 
         assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
 
-def test_density_operator(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+def test_spin_density_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     nvec = [1, 0, 1, 1, 0, 0, 1, 0]
     for params in test_cases:
         zalm_py.params.update(params)
         zalm_py.run()
         zalm_py.calculate_density_operator(nvec)
-        density_operator_py = zalm_py.results["output_state"]
+        spin_density_matrix_py = zalm_py.results["output_state"]
 
         zalm_jl.set(**params)
-        density_operator_jl = zalm_jl.density_operator(nvec)
-
-        assert np.allclose(density_operator_py, density_operator_jl, atol=tol), error_with_params(params)
-    
+        spin_density_matrix_jl = zalm_jl.spin_density_matrix(nvec)
+        assert np.allclose(spin_density_matrix_py, spin_density_matrix_jl, atol=tol), error_with_params(params)
