@@ -44,7 +44,7 @@ bp = ax.boxplot(
     boxprops=dict(lw=0.5), 
     whiskerprops=dict(lw=0.5), 
     capprops=dict(lw=0.5), 
-    widths=0.6, 
+    widths=1.0, 
     patch_artist=True, 
     showfliers=False
 )

@@ -12,6 +12,14 @@ jl.seval("using Genqo")
 
 
 @dataclass
+class TMSV:
+    pass # TODO
+
+@dataclass
+class SPDC:
+    pass # TODO
+
+@dataclass
 class ZALM:
     mean_photon: float = 1e-2
     schmidt_coeffs: list[float] = field(default_factory=lambda: [1.0])
@@ -47,6 +55,7 @@ class ZALM:
         """
         for key, value in kwargs.items():
             setattr(self, key, value)
+        return self
 
     def covariance_matrix(self):
         return np.asarray(

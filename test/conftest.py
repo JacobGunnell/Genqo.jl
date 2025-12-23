@@ -3,18 +3,9 @@
 import pytest
 import numpy as np
 
+import genqo as gqpy
+import python.genqo as gqjl
 
-@pytest.fixture
-def zalm_py():
-    """Return a basic ZALM instance from the Python library for testing."""
-    import genqo as gqpy
-    return gqpy.ZALM()
-
-@pytest.fixture
-def zalm_jl():
-    """Return a basic ZALM instance from the Julia library for testing."""
-    import python.genqo as gqjl
-    return gqjl.ZALM()
 
 @pytest.fixture
 def test_cases() -> list[dict]:
@@ -44,3 +35,33 @@ def test_case_rand() -> dict:
         "mean_photon": 10**np.random.uniform(-5, 1),
     }
     return params
+
+@pytest.fixture
+def tmsv_py(test_case_rand: dict) -> gqpy.TMSV:
+    tmsv = gqpy.TMSV()
+    tmsv.params.update(test_case_rand)
+    return tmsv
+
+@pytest.fixture
+def tmsv_jl(test_case_rand: dict) -> gqjl.TMSV:
+    return gqjl.TMSV().set(test_case_rand)
+
+@pytest.fixture
+def spdc_py(test_case_rand: dict) -> gqpy.SPDC:
+    spdc = gqpy.SPDC()
+    spdc.params.update(test_case_rand)
+    return spdc
+
+@pytest.fixture
+def spdc_jl(test_case_rand: dict) -> gqjl.SPDC:
+    return gqjl.SPDC().set(test_case_rand)
+
+@pytest.fixture
+def zalm_py(test_case_rand: dict) -> gqpy.ZALM:
+    zalm = gqpy.ZALM()
+    zalm.params.update(test_case_rand)
+    return zalm
+
+@pytest.fixture
+def zalm_jl(test_case_rand: dict) -> gqjl.ZALM:
+    return gqjl.ZALM().set(test_case_rand)
