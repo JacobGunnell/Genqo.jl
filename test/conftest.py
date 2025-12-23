@@ -44,7 +44,7 @@ def tmsv_py(test_case_rand: dict) -> gqpy.TMSV:
 
 @pytest.fixture
 def tmsv_jl(test_case_rand: dict) -> gqjl.TMSV:
-    return gqjl.TMSV().set(test_case_rand)
+    return gqjl.TMSV().set(**test_case_rand)
 
 @pytest.fixture
 def spdc_py(test_case_rand: dict) -> gqpy.SPDC:
@@ -54,7 +54,7 @@ def spdc_py(test_case_rand: dict) -> gqpy.SPDC:
 
 @pytest.fixture
 def spdc_jl(test_case_rand: dict) -> gqjl.SPDC:
-    return gqjl.SPDC().set(test_case_rand)
+    return gqjl.SPDC().set(**test_case_rand)
 
 @pytest.fixture
 def zalm_py(test_case_rand: dict) -> gqpy.ZALM:
@@ -64,4 +64,4 @@ def zalm_py(test_case_rand: dict) -> gqpy.ZALM:
 
 @pytest.fixture
 def zalm_jl(test_case_rand: dict) -> gqjl.ZALM:
-    return gqjl.ZALM().set(test_case_rand)
+    return gqjl.ZALM().set(**test_case_rand)
