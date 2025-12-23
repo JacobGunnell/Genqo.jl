@@ -12,8 +12,8 @@ with open(".benchmarks/py-bench.json") as f:
 with open(".benchmarks/jl-bench.json") as f:
     jl = json.load(f)
 
-py_times = {bm["name"].removeprefix("test_"): np.array(bm["stats"]["data"]) for bm in py["benchmarks"]}
-jl_times = {name: np.array(bm[1]["times"])/1e9 for (name, bm) in jl[1][0][1]["data"]["zalm"][1]["data"].items()}
+py_times = {bm["name"].removeprefix("test_").replace("__", "."): np.array(bm["stats"]["data"]) for bm in py["benchmarks"]}
+jl_times = {name: np.array(bm[1]["times"])/1e9 for (name, bm) in jl[1][0][1]["data"].items()}
 
 # Get all functions and sort by decreasing median time
 all_funcs = list(set(py_times.keys()) | set(jl_times.keys()))
