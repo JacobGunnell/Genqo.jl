@@ -75,3 +75,15 @@ def test_probability_success(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases:
         prob_success_jl = zalm_jl.probability_success()
 
         assert np.isclose(prob_success_py, prob_success_jl, atol=tol), error_with_params(params)
+
+def test_fidelity(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        zalm_py.params.update(params)
+        zalm_py.run()
+        zalm_py.calculate_fidelity()
+        fidelity_py = zalm_py.results["fidelity"]
+
+        zalm_jl.set(**params)
+        fidelity_jl = zalm_jl.fidelity()
+
+        assert np.isclose(fidelity_py, fidelity_jl, atol=tol), error_with_params(params)
