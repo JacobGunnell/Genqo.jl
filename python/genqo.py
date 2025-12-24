@@ -69,9 +69,9 @@ class ZALM:
             )
         )
 
-    def density_operator(self, nvec):
+    def spin_density_matrix(self, nvec):
         return np.asarray(
-            jl.zalm.density_operator(
+            jl.zalm.spin_density_matrix(
                 jl.zalm.ZALM(self),
                 jl.convert(jl.Vector[jl.Int], nvec)
             )

@@ -1,9 +1,9 @@
 """Pytest configuration for genqo tests."""
 
 import pytest
+import numpy as np
 
 
-# Add any shared fixtures here
 @pytest.fixture
 def zalm_py():
     """Return a basic ZALM instance from the Python library for testing."""
@@ -33,3 +33,14 @@ def test_cases() -> list[dict]:
             "mean_photon": mean_photon,
         })
     return test_cases
+
+@pytest.fixture
+def test_case_rand() -> dict:
+    """Return a random test case (dictionary of parameters)."""
+    params = {
+        "bsm_efficiency": np.random.uniform(0.5, 1.0),
+        "outcoupling_efficiency": np.random.uniform(0.5, 1.0),
+        "detection_efficiency": np.random.uniform(0.5, 1.0),
+        "mean_photon": 10**np.random.uniform(-5, 1),
+    }
+    return params

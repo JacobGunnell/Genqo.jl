@@ -168,7 +168,7 @@ uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
 version = "6.3.0+2"
 
 [[deps.Genqo]]
-deps = ["BenchmarkTools", "BlockArrays", "BlockDiagonals", "Debugger", "LinearAlgebra", "Nemo", "PythonCall", "Revise", "Test"]
+deps = ["BenchmarkTools", "BlockArrays", "BlockDiagonals", "Debugger", "LinearAlgebra", "Nemo", "Profile", "PythonCall", "Revise", "Test"]
 path = "."
 uuid = "4075d74c-027e-4884-b5ac-9f01362c98ed"
 version = "0.1.0"
