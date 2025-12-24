@@ -3,6 +3,8 @@ module tools
 using LinearAlgebra
 using Nemo
 
+
+
 """
 Precompute Wick partitions (perfect pairings) of 1:n
 Each partition is a Vector of (i, j) pairs (as Tuples)
@@ -43,9 +45,9 @@ const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # P
 
 function wick_out(coef::ComplexF64, moment_vector::Vector{Int}, Ainv::Matrix{ComplexF64})
     # Iterate over Wick partitions
-    coeff_sum = zero(Float64)
+    coeff_sum = zero(Float64) #should this be ComplexF64?
     for partition in wick_partitions[length(moment_vector)]
-        sum_factor = one(Float64)
+        sum_factor = one(Float64) #should this be ComplexF64?
         for (i,j) in partition
             sum_factor *= Ainv[moment_vector[i], moment_vector[j]]
         end
