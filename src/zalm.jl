@@ -112,6 +112,31 @@ end
 loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 """
+Calculate the loss portion of the A matrix, specifically when calculating probability of success
+"""
+function loss_bsm_matrix_pgen(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+    G = zeros(ComplexF64, 32, 32)
+    η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
+
+    for i in 1:8
+        if i in (1,2,7,8)
+            G[i, i+16] = -1
+            G[i, i+24] = im
+            G[i+16, i+8] = -im
+            G[i+24, i+8] = -1
+        else
+            G[i, i+16] = (η[i] - 1)
+            G[i, i+24] = -im*(η[i] - 1)
+            G[i+16, i+8] = im*(η[i] - 1)
+            G[i+24, i+8] = (η[i] - 1)
+        end
+    end
+
+    return (G + transpose(G) + I) / 2
+end
+loss_bsm_matrix_pgen(zalm::ZALM) = loss_bsm_matrix_pgen(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
+
+"""
     dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
 Calculate a single element of the unnormalized density matrix.
@@ -254,5 +279,93 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
     return Coef * mat
 end
 spin_density_matrix(zalm::ZALM, nvec::Vector{Int}) = spin_density_matrix(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
+
+function moment_vector(l::Int)
+    mds = 8 # Number of modes for our system
+
+    _qai = ["qa$i" for i in 1:mds]
+    _pai = ["pa$i" for i in 1:mds]
+    _qbi = ["qb$i" for i in 1:mds]
+    _pbi = ["pb$i" for i in 1:mds]
+    all_qps = hcat(_qai, _pai, _qbi, _pbi)
+    CC = ComplexField()
+    i = onei(CC) # Imaginary unit in CC ring
+    R, generators = polynomial_ring(CC, all_qps)
+    (qai, pai, qbi, pbi) = (generators[:,i] for i in 1:mds)
+    
+    # Define the alpha and beta vectors
+    α = (qai + i .* pai) / sqrt(2)
+    β = (qbi - i .* pbi) / sqrt(2)
+
+    Ca₁ = α[1]*α[3]*α[4]*α[8]
+    Ca₂ = α[2]*α[3]*α[4]*α[7]
+    Cb₁ = β[1]*β[3]*β[4]*β[8]
+    Cb₂ = β[2]*β[3]*β[4]*β[7]
+
+    # For calculating the normalization constant
+    Ca₃ = α[1]*α[3]*α[4]*α[7]
+    Ca₄ = α[2]*α[3]*α[4]*α[8]
+    Cb₃ = β[1]*β[3]*β[4]*β[7]
+    Cb₄ = β[2]*β[3]*β[4]*β[8]
+
+    if l == 0
+        C = α[3]*α[4]*β[3]*β[4]
+    elseif l == 1
+        C = Ca₁*Cb₁
+    elseif l == 2
+        C = Ca₁*Cb₂
+    elseif l == 3
+        C = Ca₂*Cb₁
+    elseif l == 4
+        C = Ca₂*Cb₂
+    elseif l == 5
+        C = Ca₃*Cb₃
+    elseif l == 6
+        C = Ca₃*Cb₄
+    elseif l == 7
+        C = Ca₄*Cb₃
+    elseif l == 8
+        C = Ca₄*Cb₄
+    elseif l == 9
+        C = α[3]*β[3]
+    elseif l == 10
+        C = α[4]*β[4]
+    elseif l == 11
+        C = α[3]*α[4]*β[3]*β[4]
+    elseif l == 12
+        C = α[1]*α[1]*β[1]*β[1]
+    else
+        C = one(R)
+    end
+
+    return C
+end
+
+function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
+    cov = covariance_matrix(μ)
+    A = k_function_matrix(cov) + loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
+    Ainv = inv(A)
+    Γ = cov + (1/2)*I
+    detΓ = det(Γ)
+
+    D1 = sqrt(det(A))
+    D2 = detΓ^(1/4)
+    D3 = conj(detΓ)^(1/4)
+    Coef = 1/(D1*D2*D3)
+
+    # TODO: should this indexing be changed to 1-based? Or is there some mathematical meaning to the 0 index?
+    C1 = moment_vector(0)
+    C2 = moment_vector(9)
+    C3 = moment_vector(10)
+    C4 = moment_vector(14)
+
+    return real(Coef * (
+        ηᵇ^2 * (1-dark_counts)^4 * tools.W(C1, Ainv) +
+        ηᵇ * dark_counts * (1-dark_counts)^3 * tools.W(C2, Ainv) +
+        ηᵇ * dark_counts * (1-dark_counts)^3 * tools.W(C3, Ainv) +
+        dark_counts^2 * (1-dark_counts)^2 * tools.W(C4, Ainv)
+    ))
+end
+probability_success(zalm::ZALM) = probability_success(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, zalm.dark_counts)
 
 end # module

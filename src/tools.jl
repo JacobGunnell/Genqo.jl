@@ -41,13 +41,13 @@ function _wick_partitions(n::Int)
     backtrack(collect(1:n), Tuple{Int,Int}[])
     return result
 end
-const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # Precompute for n=2,4,6,8
+const wick_partitions = Dict(n => _wick_partitions(n) for n in (0, 2, 4, 6, 8)) # Precompute for n=0,2,4,6,8
 
 function wick_out(coef::ComplexF64, moment_vector::Vector{Int}, Ainv::Matrix{ComplexF64})
     # Iterate over Wick partitions
-    coeff_sum = zero(Float64) #should this be ComplexF64?
+    coeff_sum = zero(ComplexF64)
     for partition in wick_partitions[length(moment_vector)]
-        sum_factor = one(Float64) #should this be ComplexF64?
+        sum_factor = one(ComplexF64)
         for (i,j) in partition
             sum_factor *= Ainv[moment_vector[i], moment_vector[j]]
         end

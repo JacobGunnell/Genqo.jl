@@ -78,10 +78,22 @@ class ZALM:
             )
         )
 
+    def loss_bsm_matrix_pgen(self):
+        return np.asarray(
+            jl.zalm.loss_bsm_matrix_pgen(
+                jl.zalm.ZALM(self)
+            )
+        )
+
     def spin_density_matrix(self, nvec):
         return np.asarray(
             jl.zalm.spin_density_matrix(
                 jl.zalm.ZALM(self),
                 jl.convert(jl.Vector[jl.Int], nvec)
             )
+        )
+    
+    def probability_success(self):
+        return jl.zalm.probability_success(
+            jl.zalm.ZALM(self)
         )
