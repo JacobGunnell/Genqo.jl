@@ -44,9 +44,9 @@ const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # P
 
 function wick_out(coef::ComplexF64, moment_vector::Vector{Int}, Anv::Matrix{ComplexF64})
     # Iterate over Wick partitions
-    coeff_sum = zero(Float64)
+    coeff_sum = zero(Float64) #should this be ComplexF64?
     for partition in wick_partitions[length(moment_vector)]
-        sum_factor = one(Float64)
+        sum_factor = one(Float64) #should this be ComplexF64?
         for (i,j) in partition
             sum_factor *= Anv[moment_vector[i], moment_vector[j]]
         end
@@ -85,7 +85,7 @@ end
 #     return total
 # end
 """
-    W(C, Amat) -> ComplexF64
+    W(C, Anv) -> ComplexF64
 
 Compute the Wick-contracted expectation/value associated with a polynomial `C`
 using the inverse covariance/coupling matrix `Anv = inv(Amat)`.
@@ -111,16 +111,13 @@ Notes:
 See also: `wick_out`, `wick_partitions`, `monomial_to_moment_vector`.
 """
 DEBUG_WICK = false
-function W(C, Amat)
-    Anv = inv(Amat)
+function W(C, Anv::Matrix{ComplexF64})
     total = zero(ComplexF64)
 
     # number of generators/variables in the ring
     nvars = length(gens(parent(C))) # gens(parent(C)) is a list of all variables in the ring
 
     for (mon, coeff) in zip(monomials(C), coefficients(C))
-        mv = monomial_to_moment_vector(mon, nvars)
-
         # optional sanity checks (helps catch weird terms early)
         if (DEBUG_WICK)
             @assert iseven(length(mv)) "Wick needs an even number of factors; got $(length(mv))"
