@@ -338,4 +338,50 @@ function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
 end
 probability_success(zalm::ZALM) = probability_success(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, zalm.dark_counts)
 
+function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+ # Calculate the fidelity with respect to the Bell state for the photon-photon single-mode ZALM source
+
+    cov = covariance_matrix(μ)
+    
+    # Define the matrix element
+    # Python: Cn1 = ZALM.moment_vector([1], 1)
+    Cn0 = moment_vector[0]
+    Cn1 = moment_vector[1]
+    Cn2 = moment_vector[2]
+    Cn3 = moment_vector[3]
+    Cn4 = moment_vector[4]
+
+    # The loss matrix will be unique for calculating the fidelity    
+    L1 = loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
+    K = k_function_matrix(cov)
+
+    nA1 = K + L1
+    Anv1 = inv(nA1)
+
+    # ---- Compute W terms ----
+    F1 = tools.W(Cn1, Anv1)
+    F2 = tools.W(Cn2, Anv1)
+    F3 = tools.W(Cn3, Anv1)
+    F4 = tools.W(Cn4, Anv1)
+
+    # Now calculate the trace of the state, which is equivalent to the probability of generation
+    L2 = loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
+
+    nA2 = K + L2
+
+    N1 = (ηᵈ*ηᵗ)^2
+    N2 = sqrt(det(nA2))
+
+    # ---- Determinant normalizations ----
+    #   If on of the determinants is complex, sqrt and ^(0.25) use the principal complex root.
+    #   That matches NumPy broadly, but can change phase if det moves around.
+    D1 = sqrt(det(nA1))
+
+    coef = N1 * N2 / (2*D1)
+    Trc = tools.W(Cn0, nA2)
+
+    return coef * (F1 + F2 + F3 + F4) / Trc
+end
+fidelity(zalm::ZALM) = fidelity(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
+
 end # module

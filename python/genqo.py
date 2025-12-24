@@ -97,3 +97,8 @@ class ZALM:
         return jl.zalm.probability_success(
             jl.zalm.ZALM(self)
         )
+    
+    def fidelity(self):
+        return jl.zalm.fidelity(
+            jl.zalm.ZALM(self)
+        )
