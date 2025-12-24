@@ -46,22 +46,51 @@ bp = ax.boxplot(
     capprops=dict(lw=0.5), 
     widths=1.0, 
     patch_artist=True, 
+    #whis=(0,100),
     showfliers=False
 )
 for patch, color in zip(bp['boxes'], colors):
     patch.set_facecolor(color)
 
+# Add speedup annotations
+i = 0
+for j, func in enumerate(all_funcs):
+    if func in py_times and func in jl_times:
+        py_median = np.median(py_times[func])
+        jl_median = np.median(jl_times[func])
+        speedup = py_median / jl_median
+        
+        # Position text at the center between the two boxplots
+        x_pos = 3*j + 1.5
+        # Position above the higher boxplot
+        py_max = bp['whiskers'][2*i+1].get_data()[1][-1]
+        jl_max = bp['whiskers'][2*i+3].get_data()[1][-1]
+        y_pos = max(py_max, jl_max) * 1.4
+        
+        ax.text(
+            x_pos, y_pos, f'{speedup:.1f}×', 
+            ha='center', va='bottom', fontsize=8, 
+            bbox=dict(
+                boxstyle='round,pad=0.3', facecolor='white', 
+                edgecolor='gray', alpha=0.8, linewidth=0.5
+            )
+        )
+        i += 2
+    elif func in py_times or func in jl_times:
+        i += 1
+
 ax.set_xticks([3*i + 1.5 for i in range(len(all_funcs))])
 ax.set_xticklabels(all_funcs, rotation=45, ha='right')
+ax.set_xlabel("Toolbox Function")
 ax.set_yscale('log')
-ax.set_ylabel("Time (s)")
+ax.set_ylabel("Execution Time (s)")
 ax.set_title("Genqo Benchmark Comparison")
 ax.grid(axis='y', alpha=0.3)
 
 # Add legend
 legend_elements = [
-    Patch(facecolor='lightblue', label='Python'),
-    Patch(facecolor='lightcoral', label='Julia')
+    Patch(facecolor='lightblue', label='Python toolbox'),
+    Patch(facecolor='lightcoral', label='Julia toolbox')
 ]
 ax.legend(handles=legend_elements, loc='upper right')
 
