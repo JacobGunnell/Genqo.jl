@@ -2,8 +2,7 @@
 
 module zalm
 
-using BlockDiagonals
-using BlockArrays
+using BlockDiagonals, BlockArrays
 using Nemo
 using LinearAlgebra
 using PythonCall
@@ -98,7 +97,6 @@ k_function_matrix(zalm::ZALM) = k_function_matrix(covariance_matrix(zalm))
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
 """
 function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
-    # TODO: find out from Gabe why we have a different loss_bsm_matrix function for fidelity, generation probability, etc.
     G = zeros(ComplexF64, 32, 32)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
@@ -114,14 +112,14 @@ end
 loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 """
-    dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
+    dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
 Calculate a single element of the unnormalized density matrix.
 
 # Parameters
 - dmi   : Row number for the corresponding density matrix element
 - dmj   : Column number for the corresponding density matrix element
-- nAinv : Numerical inverse of the A matrix
+- Ainv  : Numerical inverse of the A matrix
 - nvec  : The vector of nᵢ's for the system, where nᵢ is the number of photons in mode i
 - ηᵗ    : Transmission efficiency
 - ηᵈ    : Detection efficiency
@@ -130,7 +128,7 @@ Calculate a single element of the unnormalized density matrix.
 # Returns
 Density matrix element for the ZALM source
 """
-function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
+function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
     mds = 8 # Number of modes for our system
 
     _qai = ["qa$i" for i in 1:mds]
@@ -215,12 +213,7 @@ function dmijZ(dmi, dmj, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
     C = Cd₃*Cd₄*Cd₅*Cd₆*Ca*Cb
 
     # Sum over wick partitions
-    elm = 0.0
-    for (mon, coeff) in zip(monomials(C), coefficients(C))
-        elm += tools.wick_out(ComplexF64(coeff), [i for i in 1:length(generators) if exponent(mon, 1, i) == 1], nAinv)
-    end
-
-    return elm
+    return tools.W(C, Ainv)
 end
 
 """
@@ -242,19 +235,19 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
     cov = covariance_matrix(μ)
-    nA = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
-    nAinv = inv(nA)
+    A = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
+    Ainv = inv(A)
     Γ = cov + (1/2)*I
     detΓ = det(Γ)
 
-    D1 = sqrt(det(nA))
+    D1 = sqrt(det(A))
     D2 = detΓ^(1/4)
     D3 = conj(detΓ)^(1/4)
     Coef = 1/(D1*D2*D3)
 
     for i in 1:lmat
         for j in 1:lmat
-            mat[i,j] = dmijZ(i, j, nAinv, nvec, ηᵗ, ηᵈ, ηᵇ)
+            mat[i,j] = dmijZ(i, j, Ainv, nvec, ηᵗ, ηᵈ, ηᵇ)
         end
     end
 

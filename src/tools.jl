@@ -1,6 +1,7 @@
 module tools
 
 using LinearAlgebra
+using Nemo
 
 """
 Precompute Wick partitions (perfect pairings) of 1:n
@@ -40,54 +41,27 @@ function _wick_partitions(n::Int)
 end
 const wick_partitions = Dict(n => _wick_partitions(n) for n in (2, 4, 6, 8)) # Precompute for n=2,4,6,8
 
-function wick_out(coef::ComplexF64, moment_vector::Vector{Int}, Anv::Matrix{ComplexF64})
+function wick_out(coef::ComplexF64, moment_vector::Vector{Int}, Ainv::Matrix{ComplexF64})
     # Iterate over Wick partitions
     coeff_sum = zero(Float64)
     for partition in wick_partitions[length(moment_vector)]
         sum_factor = one(Float64)
         for (i,j) in partition
-            sum_factor *= Anv[moment_vector[i], moment_vector[j]]
+            sum_factor *= Ainv[moment_vector[i], moment_vector[j]]
         end
         coeff_sum += sum_factor
     end
     return coeff_sum * coef
 end
 
-"""
-term_factors: something like a Vector of factors (numbers and symbols)
-bv_map: Dict mapping basis symbol/Num -> index in Anv
-Returns: (coef, mv_idx::Vector{Int})
-"""
-function wick_coupling_indices(term_factors, bv_map::Dict)
-    coef = 1
-    mv_idx = Int[]
-
-    for f in term_factors
-        if f isa Number
-            coef *= ComplexF64(f)
-        else
-            idx = bv_map[f]
-            push!(mv_idx, idx)
-        end
+function W(C::Nemo.Generic.MPoly{Nemo.ComplexFieldElem}, Ainv::Matrix{ComplexF64})
+    elm = zero(Float64)
+    n_vars = nvars(parent(C))
+    for (mon, coeff) in zip(monomials(C), coefficients(C))
+        elm += wick_out(ComplexF64(coeff), [i for i in 1:n_vars if exponent(mon, 1, i) == 1], Ainv)
     end
-
-    return coef, mv_idx
+    return elm
 end
-
-
-function W(Cni, Amat, bv_map)
-    Anv = inv(Amat)
-    total = 0
-
-    for term in Cni
-        coef, mv = wick_coupling_indices(term, bv_map)
-        total += wick_out(coef, mv, Anv)
-    end
-
-    return total
-end
-
-
 
 function permutation_matrix(permutations::Vector{Int})
     n = length(permutations)
