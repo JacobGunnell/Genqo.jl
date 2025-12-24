@@ -281,7 +281,7 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
 end
 spin_density_matrix(zalm::ZALM, nvec::Vector{Int}) = spin_density_matrix(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
 
-function moment_vector(l::Int)
+const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begin
     Ca₁ = α[1]*α[3]*α[4]*α[8]
     Ca₂ = α[2]*α[3]*α[4]*α[7]
     Cb₁ = β[1]*β[3]*β[4]*β[8]
@@ -293,37 +293,22 @@ function moment_vector(l::Int)
     Cb₃ = β[1]*β[3]*β[4]*β[7]
     Cb₄ = β[2]*β[3]*β[4]*β[8]
 
-    if l == 0
-        C = α[3]*α[4]*β[3]*β[4]
-    elseif l == 1
-        C = Ca₁*Cb₁
-    elseif l == 2
-        C = Ca₁*Cb₂
-    elseif l == 3
-        C = Ca₂*Cb₁
-    elseif l == 4
-        C = Ca₂*Cb₂
-    elseif l == 5
-        C = Ca₃*Cb₃
-    elseif l == 6
-        C = Ca₃*Cb₄
-    elseif l == 7
-        C = Ca₄*Cb₃
-    elseif l == 8
-        C = Ca₄*Cb₄
-    elseif l == 9
-        C = α[3]*β[3]
-    elseif l == 10
-        C = α[4]*β[4]
-    elseif l == 11
-        C = α[3]*α[4]*β[3]*β[4]
-    elseif l == 12
-        C = α[1]*α[1]*β[1]*β[1]
-    else
-        C = one(R)
-    end
-
-    return C
+    Dict(
+        0 => α[3]*α[4]*β[3]*β[4],
+        1 => Ca₁*Cb₁,
+        2 => Ca₁*Cb₂,
+        3 => Ca₂*Cb₁,
+        4 => Ca₂*Cb₂,
+        5 => Ca₃*Cb₃,
+        6 => Ca₃*Cb₄,
+        7 => Ca₄*Cb₃,
+        8 => Ca₄*Cb₄,
+        9 => α[3]*β[3],
+        10 => α[4]*β[4],
+        11 => α[3]*α[4]*β[3]*β[4],
+        12 => α[1]*α[1]*β[1]*β[1],
+        14 => one(R)
+    )
 end
 
 function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
@@ -339,10 +324,10 @@ function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
     Coef = 1/(D1*D2*D3)
 
     # TODO: should this indexing be changed to 1-based? Or is there some mathematical meaning to the 0 index?
-    C1 = moment_vector(0)
-    C2 = moment_vector(9)
-    C3 = moment_vector(10)
-    C4 = moment_vector(14)
+    C1 = moment_vector[0]
+    C2 = moment_vector[9]
+    C3 = moment_vector[10]
+    C4 = moment_vector[14]
 
     return real(Coef * (
         ηᵇ^2 * (1-dark_counts)^4 * tools.W(C1, Ainv) +
