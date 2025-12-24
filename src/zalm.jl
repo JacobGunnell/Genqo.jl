@@ -30,6 +30,23 @@ ZALM(zalm_py::Py) = ZALM(
     pyconvert(Float64, zalm_py.visibility)
 )
 
+# Global quadrature variables
+mds = 8 # Number of modes for our system
+
+_qai = ["qa$i" for i in 1:mds]
+_pai = ["pa$i" for i in 1:mds]
+_qbi = ["qb$i" for i in 1:mds]
+_pbi = ["pb$i" for i in 1:mds]
+all_qps = hcat(_qai, _pai, _qbi, _pbi)
+CC = ComplexField()
+i = onei(CC) # Imaginary unit in CC ring
+R, generators = polynomial_ring(CC, all_qps)
+(qai, pai, qbi, pbi) = (generators[:,i] for i in 1:mds)
+
+# Define the alpha and beta vectors
+α = (qai + i .* pai) / sqrt(2)
+β = (qbi - i .* pbi) / sqrt(2)
+
 """
 Calculate the covariance matrix of the single-mode ZALM source
 """
@@ -154,22 +171,6 @@ Calculate a single element of the unnormalized density matrix.
 Density matrix element for the ZALM source
 """
 function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
-    mds = 8 # Number of modes for our system
-
-    _qai = ["qa$i" for i in 1:mds]
-    _pai = ["pa$i" for i in 1:mds]
-    _qbi = ["qb$i" for i in 1:mds]
-    _pbi = ["pb$i" for i in 1:mds]
-    all_qps = hcat(_qai, _pai, _qbi, _pbi)
-    CC = ComplexField()
-    i = onei(CC) # Imaginary unit in CC ring
-    R, generators = polynomial_ring(CC, all_qps)
-    (qai, pai, qbi, pbi) = (generators[:,i] for i in 1:mds)
-    
-    # Define the alpha and beta vectors
-    α = (qai + i .* pai) / sqrt(2)
-    β = (qbi - i .* pbi) / sqrt(2)
-
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
     # Calculate Ca based on dmi value
@@ -281,22 +282,6 @@ end
 spin_density_matrix(zalm::ZALM, nvec::Vector{Int}) = spin_density_matrix(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
 
 function moment_vector(l::Int)
-    mds = 8 # Number of modes for our system
-
-    _qai = ["qa$i" for i in 1:mds]
-    _pai = ["pa$i" for i in 1:mds]
-    _qbi = ["qb$i" for i in 1:mds]
-    _pbi = ["pb$i" for i in 1:mds]
-    all_qps = hcat(_qai, _pai, _qbi, _pbi)
-    CC = ComplexField()
-    i = onei(CC) # Imaginary unit in CC ring
-    R, generators = polynomial_ring(CC, all_qps)
-    (qai, pai, qbi, pbi) = (generators[:,i] for i in 1:mds)
-    
-    # Define the alpha and beta vectors
-    α = (qai + i .* pai) / sqrt(2)
-    β = (qbi - i .* pbi) / sqrt(2)
-
     Ca₁ = α[1]*α[3]*α[4]*α[8]
     Ca₂ = α[2]*α[3]*α[4]*α[7]
     Cb₁ = β[1]*β[3]*β[4]*β[8]
