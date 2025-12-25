@@ -6,7 +6,7 @@ using BlockDiagonals, BlockArrays
 using PythonCall
 
 
-struct ZALMParams
+struct GenqoParams
     mean_photon::Float64
     schmidt_coeffs::Vector{Float64}
     detection_efficiency::Float64
@@ -16,7 +16,7 @@ struct ZALMParams
     visibility::Float64
 end
 
-ZALMParams(params_py::Py) = ZALMParams(
+GenqoParams(params_py::Py) = GenqoParams(
     pyconvert(Float64, params_py.mean_photon),
     pyconvert(Vector{Float64}, params_py.schmidt_coeffs),
     pyconvert(Float64, params_py.detection_efficiency),

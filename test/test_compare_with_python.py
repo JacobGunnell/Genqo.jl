@@ -8,7 +8,27 @@ tol = 1e-8
 
 error_with_params = lambda params: f"Python-Julia comparison yielded results that do not agree for parameters:\n{'\n'.join([f'{k}={v}' for k, v in params.items()])}"
 
-def test_covariance_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+# TMSV tests
+
+
+# SPDC tests
+
+def test_spdc__spin_density_matrix(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, test_cases: list[dict]) -> None:
+    nvec = [1, 0, 1, 1, 0, 0, 1, 0]
+    for params in test_cases:
+        spdc_py.params.update(params)
+        spdc_py.run()
+        spdc_py.calculate_density_operator(nvec)
+        spin_density_matrix_py = spdc_py.results["output_state"]
+
+        spdc_jl.set(**params)
+        spin_density_matrix_jl = spdc_jl.spin_density_matrix(nvec)
+        assert np.allclose(spin_density_matrix_py, spin_density_matrix_jl, atol=tol), error_with_params(params)
+
+
+# ZALM tests
+
+def test_zalm__covariance_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     for params in test_cases:
         zalm_py.params.update(params)
         zalm_py.calculate_covariance_matrix()
@@ -19,18 +39,7 @@ def test_covariance_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: l
 
         assert np.allclose(covariance_matrix_py, covariance_matrix_jl, atol=tol), error_with_params(params)
 
-def test_k_function_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
-    for params in test_cases:
-        zalm_py.params.update(params)
-        zalm_py.run()
-        k_function_matrix_py = zalm_py.results["k_function_matrix"]
-
-        zalm_jl.set(**params)
-        k_function_matrix_jl = gqjl._k_function_matrix(zalm_jl.covariance_matrix())
-
-        assert np.allclose(k_function_matrix_py, k_function_matrix_jl, atol=tol), error_with_params(params)
-
-def test_loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+def test_zalm__loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     for params in test_cases:
         zalm_py.params.update(params)
         zalm_py.calculate_loss_bsm_matrix_fid()
@@ -41,7 +50,7 @@ def test_loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases:
 
         assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
 
-def test_loss_bsm_matrix_pgen(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+def test_zalm__loss_bsm_matrix_pgen(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     for params in test_cases:
         zalm_py.params.update(params)
         zalm_py.calculate_loss_bsm_matrix_pgen()
@@ -52,7 +61,7 @@ def test_loss_bsm_matrix_pgen(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases
 
         assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
 
-def test_spin_density_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+def test_zalm__spin_density_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     nvec = [1, 0, 1, 1, 0, 0, 1, 0]
     for params in test_cases:
         zalm_py.params.update(params)
@@ -64,7 +73,7 @@ def test_spin_density_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases:
         spin_density_matrix_jl = zalm_jl.spin_density_matrix(nvec)
         assert np.allclose(spin_density_matrix_py, spin_density_matrix_jl, atol=tol), error_with_params(params)
 
-def test_probability_success(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+def test_zalm__probability_success(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     for params in test_cases:
         zalm_py.params.update(params)
         zalm_py.run()
@@ -76,7 +85,7 @@ def test_probability_success(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases:
 
         assert np.isclose(prob_success_py, prob_success_jl, atol=tol), error_with_params(params)
 
-def test_fidelity(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+def test_zalm__fidelity(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
     for params in test_cases:
         zalm_py.params.update(params)
         zalm_py.run()
@@ -87,3 +96,16 @@ def test_fidelity(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]
         fidelity_jl = zalm_jl.fidelity()
 
         assert np.isclose(fidelity_py, fidelity_jl, atol=tol), error_with_params(params)
+
+
+# Other tests
+def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        zalm_py.params.update(params)
+        zalm_py.run()
+        k_function_matrix_py = zalm_py.results["k_function_matrix"]
+
+        zalm_jl.set(**params)
+        k_function_matrix_jl = gqjl._k_function_matrix(zalm_jl.covariance_matrix())
+
+        assert np.allclose(k_function_matrix_py, k_function_matrix_jl, atol=tol), error_with_params(params)

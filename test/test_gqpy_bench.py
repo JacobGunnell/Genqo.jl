@@ -30,6 +30,9 @@ def test_spdc__spin_density_matrix(spdc_py: gqpy.SPDC, benchmark):
 def test_spdc__covariance_matrix(spdc_py: gqpy.SPDC, benchmark):
     benchmark(spdc_py.calculate_covariance_matrix)
 
+def test_spdc__loss_bsm_matrix_fid(spdc_py: gqpy.SPDC, benchmark):
+    benchmark(spdc_py.calculate_loss_matrix_fid)
+
 def test_spdc__loss_bsm_matrix_trace(spdc_py: gqpy.SPDC, benchmark):
     benchmark(spdc_py.calculate_loss_bsm_matrix_trace)
 

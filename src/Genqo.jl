@@ -6,11 +6,11 @@ include("spdc.jl")
 include("zalm.jl")
 
 import .tools
-using .tools: ZALMParams
+using .tools: GenqoParams
 import .tmsv
 import .spdc
 import .zalm
 
-export tools, tmsv, spdc, zalm, ZALMParams
+export tools, tmsv, spdc, zalm, GenqoParams
 
 end # module

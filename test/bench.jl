@@ -5,7 +5,7 @@ using BenchmarkTools
 uniform(min_val, max_val) = min_val + (max_val-min_val)*rand(Float64)
 log_uniform(min_exp, max_exp) = 10^uniform(min_exp, max_exp)
 
-rand_params()::ZALMParams = ZALMParams(
+rand_params()::GenqoParams = GenqoParams(
     log_uniform(-5, 1),
     [one(Float64)],
     uniform(0.5, 1.0),
@@ -22,6 +22,10 @@ suite = BenchmarkGroup()
 # TMSV benchmarks
 
 # SPDC benchmarks
+suite["spdc.covariance_matrix"]    = @benchmarkable spdc.covariance_matrix(p)           setup=(p=rand_params())
+suite["spdc.loss_bsm_matrix_fid"]  = @benchmarkable spdc.loss_bsm_matrix_fid(p)         setup=(p=rand_params())
+suite["spdc.spin_density_matrix"]  = @benchmarkable spdc.spin_density_matrix(p, $nvec)  setup=(p=rand_params())
+#suite["spdc.probability_success"]  = @benchmarkable spdc.probability_success(p)         setup=(p=rand_params())
 
 # ZALM benchmarks
 suite["zalm.covariance_matrix"]    = @benchmarkable zalm.covariance_matrix(p)           setup=(p=rand_params())

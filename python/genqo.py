@@ -12,15 +12,7 @@ jl.seval("using Genqo")
 
 
 @dataclass
-class TMSV:
-    pass # TODO
-
-@dataclass
-class SPDC:
-    pass # TODO
-
-@dataclass
-class ZALM:
+class GenqoParams:
     mean_photon: float = 1e-2
     schmidt_coeffs: list[float] = field(default_factory=lambda: [1.0])
     detection_efficiency: float = 1.0
@@ -32,12 +24,12 @@ class ZALM:
     @classmethod
     def from_dict(cls, params: dict):
         """
-        Create a ZALM object from a dictionary of parameters.
+        Create a GenqoParams object from a dictionary of parameters.
         Args:
             params: dictionary of parameters.
 
         Returns:
-            ZALM object.
+            GenqoParams object.
 
         >>> params = {"mean_photon": 1e-3, "schmidt_coeffs": [1.0]}
         >>> zalm = ZALM.from_dict(params)
@@ -46,7 +38,7 @@ class ZALM:
     
     def set(self, **kwargs):
         """
-        Set the parameters of the ZALM object.
+        Set the parameters of the GenqoParams object.
         Args:
             **kwargs: keyword arguments to set the parameters.
         
@@ -57,43 +49,70 @@ class ZALM:
             setattr(self, key, value)
         return self
 
+class TMSV(GenqoParams):
+    pass # TODO
+
+class SPDC(GenqoParams):
+    def covariance_matrix(self):
+        return np.asarray(
+            jl.spdc.covariance_matrix(
+                jl.GenqoParams(self)
+            )
+        )
+    
+    def loss_bsm_matrix_fid(self):
+        return np.asarray(
+            jl.spdc.loss_bsm_matrix_fid(
+                jl.GenqoParams(self)
+            )
+        )
+    
+    def spin_density_matrix(self, nvec):
+        return np.asarray(
+            jl.spdc.spin_density_matrix(
+                jl.GenqoParams(self),
+                jl.convert(jl.Vector[jl.Int], nvec)
+            )
+        )
+
+class ZALM(GenqoParams):
     def covariance_matrix(self):
         return np.asarray(
             jl.zalm.covariance_matrix(
-                jl.ZALMParams(self)
+                jl.GenqoParams(self)
             )
         )
     
     def loss_bsm_matrix_fid(self):
         return np.asarray(
             jl.zalm.loss_bsm_matrix_fid(
-                jl.ZALMParams(self)
+                jl.GenqoParams(self)
             )
         )
 
     def loss_bsm_matrix_pgen(self):
         return np.asarray(
             jl.zalm.loss_bsm_matrix_pgen(
-                jl.ZALMParams(self)
+                jl.GenqoParams(self)
             )
         )
 
     def spin_density_matrix(self, nvec):
         return np.asarray(
             jl.zalm.spin_density_matrix(
-                jl.ZALMParams(self),
+                jl.GenqoParams(self),
                 jl.convert(jl.Vector[jl.Int], nvec)
             )
         )
     
     def probability_success(self):
         return jl.zalm.probability_success(
-            jl.ZALMParams(self)
+            jl.GenqoParams(self)
         )
     
     def fidelity(self):
         return jl.zalm.fidelity(
-            jl.ZALMParams(self)
+            jl.GenqoParams(self)
         )
     
 def _k_function_matrix(covariance_matrix: np.ndarray) -> np.ndarray:

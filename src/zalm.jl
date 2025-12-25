@@ -8,7 +8,7 @@ using LinearAlgebra
 
 import ..spdc
 import ..tools
-using ..tools: ZALMParams
+using ..tools: GenqoParams
 
 
 # Global quadrature variables
@@ -67,7 +67,7 @@ function covariance_matrix(μ::Float64)
 
     return S46 * S35 * covar_qqpp * S35' * S46'
 end
-covariance_matrix(params::ZALMParams) = covariance_matrix(params.mean_photon)
+covariance_matrix(params::GenqoParams) = covariance_matrix(params.mean_photon)
 
 """
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
@@ -85,7 +85,7 @@ function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
     return (G + transpose(G) + I) / 2
 end
-loss_bsm_matrix_fid(params::ZALMParams) = loss_bsm_matrix_fid(params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
+loss_bsm_matrix_fid(params::GenqoParams) = loss_bsm_matrix_fid(params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
 
 """
 Calculate the loss portion of the A matrix, specifically when calculating probability of success
@@ -110,7 +110,7 @@ function loss_bsm_matrix_pgen(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
     return (G + transpose(G) + I) / 2
 end
-loss_bsm_matrix_pgen(params::ZALMParams) = loss_bsm_matrix_pgen(params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
+loss_bsm_matrix_pgen(params::GenqoParams) = loss_bsm_matrix_pgen(params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
 
 """
     dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
@@ -238,7 +238,7 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
 
     return Coef * mat
 end
-spin_density_matrix(params::ZALMParams, nvec::Vector{Int}) = spin_density_matrix(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency, nvec)
+spin_density_matrix(params::GenqoParams, nvec::Vector{Int}) = spin_density_matrix(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency, nvec)
 
 const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begin
     Ca₁ = α[1]*α[3]*α[4]*α[8]
@@ -295,7 +295,7 @@ function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
         dark_counts^2 * (1-dark_counts)^2 * tools.W(C4, Ainv)
     ))
 end
-probability_success(params::ZALMParams) = probability_success(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency, params.dark_counts)
+probability_success(params::GenqoParams) = probability_success(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency, params.dark_counts)
 
 function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
  # Calculate the fidelity with respect to the Bell state for the photon-photon single-mode ZALM source
@@ -341,6 +341,6 @@ function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
     return coef * (F1 + F2 + F3 + F4) / Trc
 end
-fidelity(params::ZALMParams) = fidelity(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
+fidelity(params::GenqoParams) = fidelity(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
 
 end # module
