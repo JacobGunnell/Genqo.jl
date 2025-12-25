@@ -13,6 +13,27 @@ error_with_params = lambda params: f"Python-Julia comparison yielded results tha
 
 # SPDC tests
 
+def test_spdc__covariance_matrix(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        spdc_py.params.update(params)
+        covariance_matrix_py = spdc_py.spdc_covar(params["mean_photon"])
+
+        spdc_jl.set(**params)
+        covariance_matrix_jl = spdc_jl.covariance_matrix()
+
+        assert np.allclose(covariance_matrix_py, covariance_matrix_jl, atol=tol), error_with_params(params)
+
+def test_spdc__loss_bsm_matrix_fid(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        spdc_py.params.update(params)
+        spdc_py.calculate_loss_matrix_fid()
+        loss_bsm_matrix_py = spdc_py.results["loss_bsm_matrix"]
+
+        spdc_jl.set(**params)
+        loss_bsm_matrix_jl = spdc_jl.loss_bsm_matrix_fid()
+
+        assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
+
 def test_spdc__spin_density_matrix(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, test_cases: list[dict]) -> None:
     nvec = [1, 0, 1, 1, 0, 0, 1, 0]
     for params in test_cases:
