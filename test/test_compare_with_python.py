@@ -46,6 +46,18 @@ def test_spdc__spin_density_matrix(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, test_
         spin_density_matrix_jl = spdc_jl.spin_density_matrix(nvec)
         assert np.allclose(spin_density_matrix_py, spin_density_matrix_jl, atol=tol), error_with_params(params)
 
+def test_spdc__probability_success(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        spdc_py.params.update(params)
+        spdc_py.run()
+        spdc_py.calculate_probability_success()
+        prob_success_py = spdc_py.results["probability_success"]
+
+        spdc_jl.set(**params)
+        prob_success_jl = spdc_jl.probability_success()
+
+        assert np.isclose(prob_success_py, prob_success_jl, atol=tol), error_with_params(params)
+
 
 # ZALM tests
 

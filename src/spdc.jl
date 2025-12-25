@@ -60,6 +60,22 @@ end
 loss_bsm_matrix_fid(params::GenqoParams) = loss_bsm_matrix_fid(params.outcoupling_efficiency, params.detection_efficiency)
 
 """
+Calculating the portion of the A matrix that arises due to incorporating loss, specifically for the trace of the BSM matrix
+"""
+loss_bsm_matrix_trace::Matrix{ComplexF64} = begin
+    G = zeros(ComplexF64, 16, 16)
+
+    for i in 1:4
+        G[i, i+8] = -1
+        G[i, i+12] = im
+        G[i+4, i+8] = -im
+        G[i+4, i+12] = -1
+    end
+
+    (G + transpose(G) + I) / 2
+end
+
+"""
     dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
 Calculate a single element of the unnormalized density matrix.
@@ -181,5 +197,22 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, nvec::
     return Coef * mat
 end
 spin_density_matrix(params::GenqoParams, nvec::Vector{Int}) = spin_density_matrix(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, nvec)
+
+function probability_success(μ::Float64, ηᵇ::Float64)
+    cov = covariance_matrix(μ)
+    A = tools.k_function_matrix(cov) + loss_bsm_matrix_trace
+    #Ainv = inv(A)
+    Γ = cov + (1/2)*I
+    detΓ = det(Γ)
+
+    N1 = ηᵇ^2
+    D1 = sqrt(det(A))
+    D2 = detΓ^(1/4)
+    D3 = conj(detΓ)^(1/4)
+    Coef = N1/(D1*D2*D3)
+
+    return real(Coef)
+end
+probability_success(params::GenqoParams) = probability_success(params.mean_photon, params.bsm_efficiency)
 
 end # module

@@ -74,6 +74,11 @@ class SPDC(GenqoParams):
                 jl.convert(jl.Vector[jl.Int], nvec)
             )
         )
+    
+    def probability_success(self):
+        return jl.spdc.probability_success(
+            jl.GenqoParams(self)
+        )
 
 class ZALM(GenqoParams):
     def covariance_matrix(self):
