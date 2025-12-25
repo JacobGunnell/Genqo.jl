@@ -12,10 +12,6 @@ def test_tmsv__probability_success(tmsv_py: gqpy.TMSV, benchmark):
 def test_tmsv__covariance_matrix(tmsv_py: gqpy.TMSV, benchmark):
     benchmark(tmsv_py.calculate_covariance_matrix)
 
-def test_tmsv__k_function_matrix(tmsv_py: gqpy.TMSV, benchmark):
-    tmsv_py.calculate_covariance_matrix()
-    benchmark(tmsv_py.calculate_k_function_matrix)
-
 def test_tmsv__loss_matrix(tmsv_py: gqpy.TMSV, benchmark):
     benchmark(tmsv_py.calculate_loss_matrix)
 
@@ -33,10 +29,6 @@ def test_spdc__spin_density_matrix(spdc_py: gqpy.SPDC, benchmark):
 
 def test_spdc__covariance_matrix(spdc_py: gqpy.SPDC, benchmark):
     benchmark(spdc_py.calculate_covariance_matrix)
-
-def test_spdc__k_function_matrix(spdc_py: gqpy.SPDC,  benchmark):
-    spdc_py.calculate_covariance_matrix()
-    benchmark(spdc_py.calculate_k_function_matrix)
 
 def test_spdc__loss_bsm_matrix_trace(spdc_py: gqpy.SPDC, benchmark):
     benchmark(spdc_py.calculate_loss_bsm_matrix_trace)
@@ -56,9 +48,11 @@ def test_zalm__spin_density_matrix(zalm_py: gqpy.ZALM, benchmark):
 def test_zalm__covariance_matrix(zalm_py: gqpy.ZALM, benchmark):
     benchmark(zalm_py.calculate_covariance_matrix)
 
-def test_zalm__k_function_matrix(zalm_py: gqpy.ZALM,  benchmark):
-    zalm_py.calculate_covariance_matrix()
-    benchmark(zalm_py.calculate_k_function_matrix)
-
 def test_zalm__loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, benchmark):
     benchmark(zalm_py.calculate_loss_bsm_matrix_fid)
+
+# Other benchmarks
+
+def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, benchmark):
+    zalm_py.calculate_covariance_matrix()
+    benchmark(zalm_py.calculate_k_function_matrix)

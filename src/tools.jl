@@ -2,8 +2,29 @@ module tools
 
 using LinearAlgebra
 using Nemo
+using BlockDiagonals, BlockArrays
+using PythonCall
 
 
+struct ZALMParams
+    mean_photon::Float64
+    schmidt_coeffs::Vector{Float64}
+    detection_efficiency::Float64
+    bsm_efficiency::Float64
+    outcoupling_efficiency::Float64
+    dark_counts::Float64
+    visibility::Float64
+end
+
+ZALMParams(params_py::Py) = ZALMParams(
+    pyconvert(Float64, params_py.mean_photon),
+    pyconvert(Vector{Float64}, params_py.schmidt_coeffs),
+    pyconvert(Float64, params_py.detection_efficiency),
+    pyconvert(Float64, params_py.bsm_efficiency),
+    pyconvert(Float64, params_py.outcoupling_efficiency),
+    pyconvert(Float64, params_py.dark_counts),
+    pyconvert(Float64, params_py.visibility)
+)
 
 """
 Precompute Wick partitions (perfect pairings) of 1:n
@@ -72,6 +93,27 @@ function permutation_matrix(permutations::Vector{Int})
         P[i, permutations[i]] = 1
     end
     return P
+end
+
+"""
+Calculate the K function portion of the A matrix.
+"""
+function k_function_matrix(covariance_matrix::Matrix{Float64})
+    Γ = covariance_matrix + (1/2)*I
+    sz = size(Γ)[1] ÷ 2
+    Γinv = BlockArray(inv(Γ), [sz,sz], [sz,sz])
+
+    A = Γinv[Block(1,1)]
+    C = Γinv[Block(1,2)]
+    Cᵀ = Γinv[Block(2,1)]
+    B = Γinv[Block(2,2)]
+
+    BB = (1/2)*mortar(reshape([
+        A+(im/2)*(C+Cᵀ), C-(im/2)*(A-B),
+        Cᵀ-(im/2)*(A-B), B-(im/2)*(C+Cᵀ)
+    ], 2, 2))
+
+    return Matrix(BlockDiagonal([BB, conj(BB)]))
 end
 
 end # module

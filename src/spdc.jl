@@ -4,6 +4,8 @@ using BlockDiagonals
 
 import ..tmsv
 import ..tools
+using ..tools: ZALMParams
+
 
 """
 Calculate the covariance matrix of the SPDC source
@@ -18,5 +20,6 @@ function covariance_matrix(μ::Float64)
     perm_matrix = tools.permutation_matrix(perm_indices)
     return perm_matrix * covar * perm_matrix'
 end
+covariance_matrix(params::ZALMParams) = covariance_matrix(params.mean_photon)
 
 end # module

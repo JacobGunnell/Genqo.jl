@@ -60,45 +60,45 @@ class ZALM:
     def covariance_matrix(self):
         return np.asarray(
             jl.zalm.covariance_matrix(
-                jl.zalm.ZALM(self)
-            )
-        )
-
-    def k_function_matrix(self):
-        return np.asarray(
-            jl.zalm.k_function_matrix(
-                jl.zalm.ZALM(self)
+                jl.ZALMParams(self)
             )
         )
     
     def loss_bsm_matrix_fid(self):
         return np.asarray(
             jl.zalm.loss_bsm_matrix_fid(
-                jl.zalm.ZALM(self)
+                jl.ZALMParams(self)
             )
         )
 
     def loss_bsm_matrix_pgen(self):
         return np.asarray(
             jl.zalm.loss_bsm_matrix_pgen(
-                jl.zalm.ZALM(self)
+                jl.ZALMParams(self)
             )
         )
 
     def spin_density_matrix(self, nvec):
         return np.asarray(
             jl.zalm.spin_density_matrix(
-                jl.zalm.ZALM(self),
+                jl.ZALMParams(self),
                 jl.convert(jl.Vector[jl.Int], nvec)
             )
         )
     
     def probability_success(self):
         return jl.zalm.probability_success(
-            jl.zalm.ZALM(self)
+            jl.ZALMParams(self)
         )
     
     def fidelity(self):
         return jl.zalm.fidelity(
-            jl.zalm.ZALM(self)
+            jl.ZALMParams(self)
         )
+    
+def _k_function_matrix(covariance_matrix: np.ndarray) -> np.ndarray:
+    return np.asarray(
+        jl.tools.k_function_matrix(
+            jl.convert(jl.Matrix[jl.Float64], covariance_matrix)
+        )
+    )

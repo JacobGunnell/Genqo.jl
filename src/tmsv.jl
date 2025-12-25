@@ -2,6 +2,9 @@ module tmsv
 
 using BlockArrays
 
+using ..tools: ZALMParams
+
+
 """
     covariance_matrix(μ::Float64)
 
@@ -27,5 +30,6 @@ function covariance_matrix(μ::Float64)
         B, A
     ], 2, 2))
 end
+covariance_matrix(params::ZALMParams) = covariance_matrix(params.mean_photon)
 
 end # module
