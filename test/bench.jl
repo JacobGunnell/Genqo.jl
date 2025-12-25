@@ -25,7 +25,7 @@ suite = BenchmarkGroup()
 suite["spdc.covariance_matrix"]    = @benchmarkable spdc.covariance_matrix(p)           setup=(p=rand_params())
 suite["spdc.loss_bsm_matrix_fid"]  = @benchmarkable spdc.loss_bsm_matrix_fid(p)         setup=(p=rand_params())
 suite["spdc.spin_density_matrix"]  = @benchmarkable spdc.spin_density_matrix(p, $nvec)  setup=(p=rand_params())
-#suite["spdc.probability_success"]  = @benchmarkable spdc.probability_success(p)         setup=(p=rand_params())
+suite["spdc.probability_success"]  = @benchmarkable spdc.probability_success(p)         setup=(p=rand_params())
 
 # ZALM benchmarks
 suite["zalm.covariance_matrix"]    = @benchmarkable zalm.covariance_matrix(p)           setup=(p=rand_params())
