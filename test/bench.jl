@@ -35,6 +35,7 @@ suite["zalm.covariance_matrix"]      = @benchmarkable zalm.covariance_matrix(p) 
 suite["zalm.loss_bsm_matrix_fid"]    = @benchmarkable zalm.loss_bsm_matrix_fid(p)         setup=(p=rand_params())
 suite["zalm.spin_density_matrix"]    = @benchmarkable zalm.spin_density_matrix(p, $nvec)  setup=(p=rand_params())
 suite["zalm.probability_success"]    = @benchmarkable zalm.probability_success(p)         setup=(p=rand_params())
+suite["zalm.fidelity"]               = @benchmarkable zalm.fidelity(p)                    setup=(p=rand_params())
 
 # Other benchmarks
 suite["tools.k_function_matrix"]     = @benchmarkable tools.k_function_matrix(cov)        setup=(cov=zalm.covariance_matrix(rand_params()))
