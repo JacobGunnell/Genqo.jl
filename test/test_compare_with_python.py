@@ -9,14 +9,44 @@ tol = 1e-8
 error_with_params = lambda params: f"Python-Julia comparison yielded results that do not agree for parameters:\n{'\n'.join([f'{k}={v}' for k, v in params.items()])}"
 
 # TMSV tests
+def test_tmsv__covariance_matrix(tmsv_jl: gqjl.TMSV, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        covariance_matrix_py = gqpy.TMSV.tmsv_covar(params["mean_photon"])
+
+        tmsv_jl.set(**params)
+        covariance_matrix_jl = tmsv_jl.covariance_matrix()
+
+        assert np.allclose(covariance_matrix_py, covariance_matrix_jl, atol=tol), error_with_params(params)
+
+def test_tmsv__loss_matrix_pgen(tmsv_py: gqpy.TMSV, tmsv_jl: gqjl.TMSV, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        tmsv_py.params.update(params)
+        tmsv_py.calculate_loss_matrix()
+        loss_bsm_matrix_py = tmsv_py.results["loss_matrix"]
+
+        tmsv_jl.set(**params)
+        loss_bsm_matrix_jl = tmsv_jl.loss_matrix_pgen()
+
+        assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
+
+def test_tmsv__probability_success(tmsv_py: gqpy.TMSV, tmsv_jl: gqjl.TMSV, test_cases: list[dict]) -> None:
+    for params in test_cases:
+        tmsv_py.params.update(params)
+        tmsv_py.run()
+        tmsv_py.calculate_probability_success()
+        prob_success_py = tmsv_py.results["probability_success"]
+
+        tmsv_jl.set(**params)
+        prob_success_jl = tmsv_jl.probability_success()
+
+        assert np.isclose(prob_success_py, prob_success_jl, atol=tol), error_with_params(params)
 
 
 # SPDC tests
 
-def test_spdc__covariance_matrix(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, test_cases: list[dict]) -> None:
+def test_spdc__covariance_matrix(spdc_jl: gqjl.SPDC, test_cases: list[dict]) -> None:
     for params in test_cases:
-        spdc_py.params.update(params)
-        covariance_matrix_py = spdc_py.spdc_covar(params["mean_photon"])
+        covariance_matrix_py = gqpy.SPDC.spdc_covar(params["mean_photon"])
 
         spdc_jl.set(**params)
         covariance_matrix_jl = spdc_jl.covariance_matrix()

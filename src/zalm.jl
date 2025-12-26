@@ -11,8 +11,8 @@ import ..tools
 using ..tools: GenqoParams
 
 
-# Global quadrature variables
-mds = 8 # Number of modes for our system
+# Global canonical position and momentum variables
+const mds = 8 # Number of modes for our system
 
 _qai = ["qa$i" for i in 1:mds]
 _pai = ["pa$i" for i in 1:mds]
@@ -22,7 +22,7 @@ all_qps = hcat(_qai, _pai, _qbi, _pbi)
 CC = ComplexField()
 i = onei(CC) # Imaginary unit in CC ring
 R, generators = polynomial_ring(CC, all_qps)
-(qai, pai, qbi, pbi) = (generators[:,i] for i in 1:mds)
+(qai, pai, qbi, pbi) = (generators[:,i] for i in 1:4)
 
 # Define the alpha and beta vectors
 α = (qai + i .* pai) / sqrt(2)
@@ -39,8 +39,7 @@ function covariance_matrix(μ::Float64)
     end
 
     # Reorder qpqp → qqpp
-    perm_indices = [1:2:15; 2:2:16]
-    perm_matrix = tools.permutation_matrix(perm_indices)
+    perm_matrix = tools.permutation_matrix([1:2:15; 2:2:16])
     covar_qqpp = perm_matrix * covar_qpqp * perm_matrix'
     
     # Apply the symplective matrices that represent 50/50 beamsplitters between the bell state modes
@@ -118,13 +117,13 @@ loss_bsm_matrix_pgen(params::GenqoParams) = loss_bsm_matrix_pgen(params.outcoupl
 Calculate a single element of the unnormalized density matrix.
 
 # Parameters
-- dmi   : Row number for the corresponding density matrix element
-- dmj   : Column number for the corresponding density matrix element
-- Ainv  : Numerical inverse of the A matrix
-- nvec  : The vector of nᵢ's for the system, where nᵢ is the number of photons in mode i
-- ηᵗ    : Transmission efficiency
-- ηᵈ    : Detection efficiency
-- ηᵇ    : Bell state measurement efficiency
+- dmi : Row number for the corresponding density matrix element
+- dmj : Column number for the corresponding density matrix element
+- Ainv : Numerical inverse of the A matrix
+- nvec : The vector of nᵢ's for the system, where nᵢ is the number of photons in mode i
+- ηᵗ : Transmission efficiency
+- ηᵈ : Detection efficiency
+- ηᵇ : Bell state measurement efficiency
 
 # Returns
 Density matrix element for the ZALM source
@@ -207,10 +206,10 @@ end
 Calculate the density operator of the single-mode ZALM source on the spin-spin state.
 
 # Parameters
-- μ    : Mean photon number
-- ηᵗ   : Outcoupling efficiency
-- ηᵈ   : Detection efficiency
-- ηᵇ   : Bell state measurement efficiency
+- μ : Mean photon number
+- ηᵗ : Outcoupling efficiency
+- ηᵈ : Detection efficiency
+- ηᵇ : Bell state measurement efficiency
 - nvec : The vector of nᵢ's for the system, where nᵢ is the number of photons in mode i
 
 # Returns
@@ -270,6 +269,21 @@ const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begi
     )
 end
 
+"""
+    probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
+
+Calculate the probability of photon-photon state generation with the given parameters.
+
+# Parameters
+- μ : Mean photon number
+- ηᵗ : Outcoupling efficiency
+- ηᵈ : Detection efficiency
+- ηᵇ : Bell state measurement efficiency
+- dark_counts : Probability of click with no photon present
+
+# Returns
+Probability of successful photon-photon state generation
+"""
 function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
     cov = covariance_matrix(μ)
     A = tools.k_function_matrix(cov) + loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)

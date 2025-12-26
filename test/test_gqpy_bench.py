@@ -12,7 +12,7 @@ def test_tmsv__probability_success(tmsv_py: gqpy.TMSV, benchmark):
 def test_tmsv__covariance_matrix(tmsv_py: gqpy.TMSV, benchmark):
     benchmark(tmsv_py.calculate_covariance_matrix)
 
-def test_tmsv__loss_matrix(tmsv_py: gqpy.TMSV, benchmark):
+def test_tmsv__loss_matrix_pgen(tmsv_py: gqpy.TMSV, benchmark):
     benchmark(tmsv_py.calculate_loss_matrix)
 
 

@@ -50,7 +50,24 @@ class GenqoParams:
         return self
 
 class TMSV(GenqoParams):
-    pass # TODO
+    def covariance_matrix(self):
+        return np.asarray(
+            jl.tmsv.covariance_matrix(
+                jl.GenqoParams(self)
+            )
+        )
+    
+    def loss_matrix_pgen(self):
+        return np.asarray(
+            jl.tmsv.loss_matrix_pgen(
+                jl.GenqoParams(self)
+            )
+        )
+    
+    def probability_success(self):
+        return jl.tmsv.probability_success(
+            jl.GenqoParams(self)
+        )
 
 class SPDC(GenqoParams):
     def covariance_matrix(self):
