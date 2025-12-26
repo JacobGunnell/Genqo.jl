@@ -7,6 +7,7 @@ install:
 
 bench:
     @echo "Running benchmarks for Julia and Python genqo..."
+    mkdir -p .benchmarks
     julia --project=. test/bench.jl
 
     . python/.venv/bin/activate && \
