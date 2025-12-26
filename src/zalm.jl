@@ -267,6 +267,11 @@ const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begi
         14 => one(R)
     )
 end
+# Precompiled terms for fast Wick evaluation for specific polynomials (avoids Nemo monomial parsing per call)
+# current precompiled polynomials: all in moment_vector
+const moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}} = Dict(
+    k => tools._compile_W_terms(v) for (k, v) in moment_vector
+)
 
 """
     probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
@@ -310,49 +315,45 @@ function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
 end
 probability_success(params::GenqoParams) = probability_success(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency, params.dark_counts)
 
+
 function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
  # Calculate the fidelity with respect to the Bell state for the photon-photon single-mode ZALM source
 
     cov = covariance_matrix(μ)
-    
-    # Define the matrix element
-    # Python: Cn1 = ZALM.moment_vector([1], 1)
-    Cn0 = moment_vector[0]
-    Cn1 = moment_vector[1]
-    Cn2 = moment_vector[2]
-    Cn3 = moment_vector[3]
-    Cn4 = moment_vector[4]
-
-    # The loss matrix will be unique for calculating the fidelity    
-    L1 = loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
     K = tools.k_function_matrix(cov)
 
-    nA1 = K + L1
-    Anv1 = inv(nA1)
+    # The loss matrix will be unique for calculating the fidelity    
+    # --- A1 (fidelity loss) ---
+    A1 = K + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
 
-    # ---- Compute W terms ----
-    F1 = tools.W(Cn1, Anv1)
-    F2 = tools.W(Cn2, Anv1)
-    F3 = tools.W(Cn3, Anv1)
-    F4 = tools.W(Cn4, Anv1)
+    factoredA1 = lu(A1) # factorizes for reuse
+    Ainv1 = inv(factoredA1)
+    D1 = sqrt(det(factoredA1)) # reuses factorization
 
-    # Now calculate the trace of the state, which is equivalent to the probability of generation
-    L2 = loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
+    # ---- Compute W terms (cached) ----
+    Fsum =
+        tools.W_fast(moment_terms[1], Ainv1) +
+        tools.W_fast(moment_terms[2], Ainv1) +
+        tools.W_fast(moment_terms[3], Ainv1) +
+        tools.W_fast(moment_terms[4], Ainv1)
 
-    nA2 = K + L2
+    # --- A2 (trace / generation normalization loss) ---
+    A2 = K + loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
+    factoredA2 = lu(A2) # factorizes for reuse
+    Ainv2 = inv(factoredA2)
+    N2 = sqrt(det(factoredA2)) # reuses factorization
+    
+    Trc = tools.W_fast(moment_terms[0], Ainv2)  # <-- cached + defined
 
-    N1 = (ηᵈ*ηᵗ)^2
-    N2 = sqrt(det(nA2))
+    N1 = (ηᵈ * ηᵗ) ^ 2
+    coef = N1 * N2 / (2 * D1)
 
-    # ---- Determinant normalizations ----
-    #   If on of the determinants is complex, sqrt and ^(0.25) use the principal complex root.
-    #   That matches NumPy broadly, but can change phase if det moves around.
-    D1 = sqrt(det(nA1))
+    value = coef * Fsum / Trc 
 
-    coef = N1 * N2 / (2*D1)
-    Trc = tools.W(Cn0, nA2)
-
-    return coef * (F1 + F2 + F3 + F4) / Trc
+    if abs(imag(value)) > 1e-10
+        @warn "fidelity has nontrivial imaginary part" imag=imag(value) value=value
+    end
+    return real(value)#<-- is the restriction to real correct?
 end
 fidelity(params::GenqoParams) = fidelity(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
 
