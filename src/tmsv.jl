@@ -88,15 +88,12 @@ Calculate the probability of photon-photon state generation with the given param
 Probability of successful photon-photon state generation
 """
 function probability_success(μ::Float64, ηᵈ::Float64)
-    covar_qpqp = covariance_matrix(μ)
+    # Compute covariance matrix and eorder qpqp → qqpp
+    cov = tools.reorder(covariance_matrix(μ))
 
-    # Reorder qpqp → qqpp
-    perm_matrix = tools.permutation_matrix([1:2:3; 2:2:4])
-    covar_qqpp = perm_matrix * covar_qpqp * perm_matrix'
-
-    A = tools.k_function_matrix(covar_qqpp) + loss_matrix_pgen(ηᵈ)
+    A = tools.k_function_matrix(cov) + loss_matrix_pgen(ηᵈ)
     Ainv = inv(A)
-    Γ = covar_qqpp + (1/2)*I
+    Γ = cov + (1/2)*I
     detΓ = det(Γ)
 
     N1 = ηᵈ^2

@@ -96,6 +96,15 @@ function permutation_matrix(permutations::Vector{Int})
 end
 
 """
+Reorder covariance matrix from qpqp to qqpp ordering
+"""
+function reorder(covariance_matrix::Union{Matrix{Float64}, BlockDiagonal{Float64, Matrix{Float64}}})
+    sz = size(covariance_matrix)[1]
+    perm_matrix = permutation_matrix([1:2:sz; 2:2:sz])
+    return perm_matrix * covariance_matrix * perm_matrix'
+end
+
+"""
 Calculate the K function portion of the A matrix.
 """
 function k_function_matrix(covariance_matrix::Matrix{Float64})

@@ -39,8 +39,7 @@ function covariance_matrix(μ::Float64)
     end
 
     # Reorder qpqp → qqpp
-    perm_matrix = tools.permutation_matrix([1:2:15; 2:2:16])
-    covar_qqpp = perm_matrix * covar_qpqp * perm_matrix'
+    covar_qqpp = tools.reorder(covar_qpqp)
     
     # Apply the symplective matrices that represent 50/50 beamsplitters between the bell state modes
     S35 = begin
