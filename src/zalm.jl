@@ -5,11 +5,31 @@ module zalm
 using BlockDiagonals
 using Nemo
 using LinearAlgebra
+using PythonCall
 
 import ..spdc
-import ..tools
-using ..tools: GenqoParams
+using ..tools
 
+
+struct ZALM
+    mean_photon::Float64
+    #schmidt_coeffs::Vector{Float64}
+    detection_efficiency::Float64
+    bsm_efficiency::Float64
+    outcoupling_efficiency::Float64
+    dark_counts::Float64
+    #visibility::Float64
+end
+
+ZALM(zalm_py::Py) = ZALM(
+    pyconvert(Float64, zalm_py.mean_photon),
+    #pyconvert(Vector{Float64}, zalm_py.schmidt_coeffs),
+    pyconvert(Float64, zalm_py.detection_efficiency),
+    pyconvert(Float64, zalm_py.bsm_efficiency),
+    pyconvert(Float64, zalm_py.outcoupling_efficiency),
+    pyconvert(Float64, zalm_py.dark_counts),
+    #pyconvert(Float64, zalm_py.visibility),
+)
 
 # Global canonical position and momentum variables
 const mds = 8 # Number of modes for our system
@@ -39,7 +59,7 @@ function covariance_matrix(μ::Float64)
     end
 
     # Reorder qpqp → qqpp
-    covar_qqpp = tools.reorder(covar_qpqp)
+    covar_qqpp = reorder(covar_qpqp)
     
     # Apply the symplective matrices that represent 50/50 beamsplitters between the bell state modes
     S35 = begin
@@ -65,7 +85,7 @@ function covariance_matrix(μ::Float64)
 
     return S46 * S35 * covar_qqpp * S35' * S46'
 end
-covariance_matrix(params::GenqoParams) = covariance_matrix(params.mean_photon)
+covariance_matrix(zalm::ZALM) = covariance_matrix(zalm.mean_photon)
 
 """
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
@@ -83,7 +103,7 @@ function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
     return (G + transpose(G) + I) / 2
 end
-loss_bsm_matrix_fid(params::GenqoParams) = loss_bsm_matrix_fid(params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
+loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 """
 Calculate the loss portion of the A matrix, specifically when calculating probability of success
@@ -108,7 +128,7 @@ function loss_bsm_matrix_pgen(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
     return (G + transpose(G) + I) / 2
 end
-loss_bsm_matrix_pgen(params::GenqoParams) = loss_bsm_matrix_pgen(params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
+loss_bsm_matrix_pgen(zalm::ZALM) = loss_bsm_matrix_pgen(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 """
     dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
@@ -196,7 +216,7 @@ function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, 
     C = Cd₃*Cd₄*Cd₅*Cd₆*Ca*Cb
 
     # Sum over wick partitions
-    return tools.W(C, Ainv)
+    return W(C, Ainv)
 end
 
 """
@@ -218,7 +238,7 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
     cov = covariance_matrix(μ)
-    A = tools.k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
+    A = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
     Ainv = inv(A)
     Γ = cov + (1/2)*I
     detΓ = det(Γ)
@@ -236,7 +256,7 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
 
     return Coef * mat
 end
-spin_density_matrix(params::GenqoParams, nvec::Vector{Int}) = spin_density_matrix(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency, nvec)
+spin_density_matrix(zalm::ZALM, nvec::Vector{Int}) = spin_density_matrix(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
 
 const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begin
     Ca₁ = α[1]*α[3]*α[4]*α[8]
@@ -285,7 +305,7 @@ Probability of successful photon-photon state generation
 """
 function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
     cov = covariance_matrix(μ)
-    A = tools.k_function_matrix(cov) + loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
+    A = k_function_matrix(cov) + loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
     Ainv = inv(A)
     Γ = cov + (1/2)*I
     detΓ = det(Γ)
@@ -302,13 +322,13 @@ function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
     C4 = moment_vector[14]
 
     return real(Coef * (
-        ηᵇ^2 * (1-dark_counts)^4 * tools.W(C1, Ainv) +
-        ηᵇ * dark_counts * (1-dark_counts)^3 * tools.W(C2, Ainv) +
-        ηᵇ * dark_counts * (1-dark_counts)^3 * tools.W(C3, Ainv) +
-        dark_counts^2 * (1-dark_counts)^2 * tools.W(C4, Ainv)
+        ηᵇ^2 * (1-dark_counts)^4 * W(C1, Ainv) +
+        ηᵇ * dark_counts * (1-dark_counts)^3 * W(C2, Ainv) +
+        ηᵇ * dark_counts * (1-dark_counts)^3 * W(C3, Ainv) +
+        dark_counts^2 * (1-dark_counts)^2 * W(C4, Ainv)
     ))
 end
-probability_success(params::GenqoParams) = probability_success(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency, params.dark_counts)
+probability_success(zalm::ZALM) = probability_success(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, zalm.dark_counts)
 
 function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
  # Calculate the fidelity with respect to the Bell state for the photon-photon single-mode ZALM source
@@ -325,16 +345,16 @@ function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
     # The loss matrix will be unique for calculating the fidelity    
     L1 = loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
-    K = tools.k_function_matrix(cov)
+    K = k_function_matrix(cov)
 
     nA1 = K + L1
     Anv1 = inv(nA1)
 
     # ---- Compute W terms ----
-    F1 = tools.W(Cn1, Anv1)
-    F2 = tools.W(Cn2, Anv1)
-    F3 = tools.W(Cn3, Anv1)
-    F4 = tools.W(Cn4, Anv1)
+    F1 = W(Cn1, Anv1)
+    F2 = W(Cn2, Anv1)
+    F3 = W(Cn3, Anv1)
+    F4 = W(Cn4, Anv1)
 
     # Now calculate the trace of the state, which is equivalent to the probability of generation
     L2 = loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
@@ -350,10 +370,10 @@ function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
     D1 = sqrt(det(nA1))
 
     coef = N1 * N2 / (2*D1)
-    Trc = tools.W(Cn0, nA2)
+    Trc = W(Cn0, nA2)
 
     return coef * (F1 + F2 + F3 + F4) / Trc
 end
-fidelity(params::GenqoParams) = fidelity(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, params.bsm_efficiency)
+fidelity(zalm::ZALM) = fidelity(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 end # module

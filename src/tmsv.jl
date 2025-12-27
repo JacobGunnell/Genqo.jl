@@ -3,10 +3,20 @@ module tmsv
 using BlockArrays
 using Nemo
 using LinearAlgebra
+using PythonCall
 
-import ..tools
-using ..tools: GenqoParams
+using ..tools
 
+
+struct TMSV
+    mean_photon::Float64
+    detection_efficiency::Float64
+end
+
+TMSV(tmsv_py::Py) = TMSV(
+    pyconvert(Float64, tmsv_py.mean_photon),
+    pyconvert(Float64, tmsv_py.detection_efficiency),
+)
 
 # Global canonical position and momentum variables
 const mds = 2 # Number of modes for our system
@@ -52,7 +62,7 @@ function covariance_matrix(μ::Float64)
         ], 2, 2))
     )
 end
-covariance_matrix(params::GenqoParams) = covariance_matrix(params.mean_photon)
+covariance_matrix(tmsv::TMSV) = covariance_matrix(tmsv.mean_photon)
 
 """
 Calculates the portion of the A matrix that arrises due to incorporating loss
@@ -69,7 +79,7 @@ function loss_matrix_pgen(ηᵈ::Float64)
 
     return (G + transpose(G) + I) / 2
 end
-loss_matrix_pgen(params::GenqoParams) = loss_matrix_pgen(params.detection_efficiency)
+loss_matrix_pgen(tmsv::TMSV) = loss_matrix_pgen(tmsv.detection_efficiency)
 
 function moment_vector(n::Int)
     (α[1]*α[2])^n / factorial(n) * (β[1]*β[2])^n / factorial(n)
@@ -89,9 +99,9 @@ Probability of successful photon-photon state generation
 """
 function probability_success(μ::Float64, ηᵈ::Float64)
     # Compute covariance matrix and eorder qpqp → qqpp
-    cov = tools.reorder(covariance_matrix(μ))
+    cov = reorder(covariance_matrix(μ))
 
-    A = tools.k_function_matrix(cov) + loss_matrix_pgen(ηᵈ)
+    A = k_function_matrix(cov) + loss_matrix_pgen(ηᵈ)
     Ainv = inv(A)
     Γ = cov + (1/2)*I
     detΓ = det(Γ)
@@ -104,8 +114,8 @@ function probability_success(μ::Float64, ηᵈ::Float64)
 
     C = moment_vector(1)
 
-    return real(Coef * tools.W(C, Ainv))
+    return real(Coef * W(C, Ainv))
 end
-probability_success(params::GenqoParams) = probability_success(params.mean_photon, params.detection_efficiency)
+probability_success(tmsv::TMSV) = probability_success(tmsv.mean_photon, tmsv.detection_efficiency)
 
 end # module

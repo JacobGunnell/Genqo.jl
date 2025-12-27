@@ -3,28 +3,7 @@ module tools
 using LinearAlgebra
 using Nemo
 using BlockDiagonals, BlockArrays
-using PythonCall
 
-
-struct GenqoParams
-    mean_photon::Float64
-    schmidt_coeffs::Vector{Float64}
-    detection_efficiency::Float64
-    bsm_efficiency::Float64
-    outcoupling_efficiency::Float64
-    dark_counts::Float64
-    visibility::Float64
-end
-
-GenqoParams(params_py::Py) = GenqoParams(
-    pyconvert(Float64, params_py.mean_photon),
-    pyconvert(Vector{Float64}, params_py.schmidt_coeffs),
-    pyconvert(Float64, params_py.detection_efficiency),
-    pyconvert(Float64, params_py.bsm_efficiency),
-    pyconvert(Float64, params_py.outcoupling_efficiency),
-    pyconvert(Float64, params_py.dark_counts),
-    pyconvert(Float64, params_py.visibility)
-)
 
 """
 Precompute Wick partitions (perfect pairings) of 1:n
@@ -124,5 +103,7 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
 
     return Matrix(BlockDiagonal([BB, conj(BB)]))
 end
+
+export wick_out, W, permutation_matrix, reorder, k_function_matrix
 
 end # module

@@ -3,11 +3,28 @@ module spdc
 using BlockDiagonals
 using Nemo
 using LinearAlgebra
+using PythonCall
 
 import ..tmsv
-import ..tools
-using ..tools: GenqoParams
+using ..tools
 
+
+struct SPDC
+    mean_photon::Float64
+    detection_efficiency::Float64
+    bsm_efficiency::Float64
+    outcoupling_efficiency::Float64
+end
+
+SPDC(spdc_py::Py) = SPDC(
+    pyconvert(Float64, spdc_py.mean_photon),
+    #pyconvert(Vector{Float64}, spdc_py.schmidt_coeffs),
+    pyconvert(Float64, spdc_py.detection_efficiency),
+    pyconvert(Float64, spdc_py.bsm_efficiency),
+    pyconvert(Float64, spdc_py.outcoupling_efficiency),
+    #pyconvert(Float64, spdc_py.dark_counts),
+    #pyconvert(Float64, spdc_py.visibility),
+)
 
 # Global canonical position and momentum variables
 const mds = 4 # Number of modes for our system
@@ -36,10 +53,10 @@ function covariance_matrix(μ::Float64)
     end
 
     perm_indices = [1,2,7,8,5,6,3,4]
-    perm_matrix = tools.permutation_matrix(perm_indices)
+    perm_matrix = permutation_matrix(perm_indices)
     return perm_matrix * covar * perm_matrix'
 end
-covariance_matrix(params::GenqoParams) = covariance_matrix(params.mean_photon)
+covariance_matrix(spdc::SPDC) = covariance_matrix(spdc.mean_photon)
 
 """
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
@@ -57,7 +74,7 @@ function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64)
 
     return (G + transpose(G) + I) / 2
 end
-loss_bsm_matrix_fid(params::GenqoParams) = loss_bsm_matrix_fid(params.outcoupling_efficiency, params.detection_efficiency)
+loss_bsm_matrix_fid(spdc::SPDC) = loss_bsm_matrix_fid(spdc.outcoupling_efficiency, spdc.detection_efficiency)
 
 """
 Calculating the portion of the A matrix that arises due to incorporating loss, specifically for the trace of the BSM matrix
@@ -156,7 +173,7 @@ function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, 
     C = Ca*Cb
 
     # Sum over wick partitions
-    return tools.W(C, Ainv)
+    return W(C, Ainv)
 end
 
 """
@@ -178,7 +195,7 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, nvec::
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
     cov = covariance_matrix(μ)
-    A = tools.k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ)
+    A = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ)
     Ainv = inv(A)
     Γ = cov + (1/2)*I
     detΓ = det(Γ)
@@ -196,7 +213,7 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, nvec::
 
     return Coef * mat
 end
-spin_density_matrix(params::GenqoParams, nvec::Vector{Int}) = spin_density_matrix(params.mean_photon, params.outcoupling_efficiency, params.detection_efficiency, nvec)
+spin_density_matrix(spdc::SPDC, nvec::Vector{Int}) = spin_density_matrix(spdc.mean_photon, spdc.outcoupling_efficiency, spdc.detection_efficiency, nvec)
 
 """
     probability_success(μ::Float64, ηᵇ::Float64)
@@ -212,7 +229,7 @@ Probability of successful photon-photon state generation
 """
 function probability_success(μ::Float64, ηᵇ::Float64)
     cov = covariance_matrix(μ)
-    A = tools.k_function_matrix(cov) + loss_bsm_matrix_trace
+    A = k_function_matrix(cov) + loss_bsm_matrix_trace
     #Ainv = inv(A)
     Γ = cov + (1/2)*I
     detΓ = det(Γ)
@@ -225,6 +242,6 @@ function probability_success(μ::Float64, ηᵇ::Float64)
 
     return real(Coef)
 end
-probability_success(params::GenqoParams) = probability_success(params.mean_photon, params.bsm_efficiency)
+probability_success(spdc::SPDC) = probability_success(spdc.mean_photon, spdc.bsm_efficiency)
 
 end # module
