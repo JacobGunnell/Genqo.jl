@@ -3,7 +3,7 @@
 from juliacall import Main as jl
 from juliacall import Pkg as jlPkg
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -39,14 +39,15 @@ class GenqoParams:
         # Get valid field names for this dataclass
         valid_fields = set(self.__dataclass_fields__.keys())
         
-        for key in kwargs.keys():
-            if key not in valid_fields:
-                raise AttributeError(
-                    f"{self.__class__.__name__} has no parameter '{key}'. "
-                    f"Valid parameters are: {', '.join(sorted(valid_fields))}"
-                )
+        # for key in kwargs.keys():
+        #     if key not in valid_fields:
+        #         raise AttributeError(
+        #             f"{self.__class__.__name__} has no parameter '{key}'. "
+        #             f"Valid parameters are: {', '.join(sorted(valid_fields))}"
+        #         )
         for key, value in kwargs.items():
-            setattr(self, key, value)
+            if key in valid_fields:
+                setattr(self, key, value)
         return self
     
 
@@ -137,10 +138,12 @@ class ZALM(GenqoParams):
     def __post_init__(self):
         if self.mean_photon <= 0:
             raise ValueError("mean_photon must be positive.")
-        for eff_name in ["detection_efficiency", "bsm_efficiency", "outcoupling_efficiency", "dark_counts"]:
+        for eff_name in ["detection_efficiency", "bsm_efficiency", "outcoupling_efficiency"]:
             eff_value = getattr(self, eff_name)
             if not (0 < eff_value <= 1):
                 raise ValueError(f"{eff_name} must be in (0, 1].")
+        if self.dark_counts < 0:
+            raise ValueError("dark_counts must be non-negative.")
         #if not (0 < self.visibility <= 1):
         #    raise ValueError("visibility must be in (0, 1].")
     
