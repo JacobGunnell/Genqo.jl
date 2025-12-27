@@ -2,7 +2,7 @@ module tools
 
 using LinearAlgebra
 using Nemo
-using BlockDiagonals, BlockArrays
+using BlockDiagonals
 
 
 """

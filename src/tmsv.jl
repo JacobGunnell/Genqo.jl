@@ -1,6 +1,5 @@
 module tmsv
 
-using BlockArrays
 using Nemo
 using LinearAlgebra
 using PythonCall
@@ -46,22 +45,12 @@ Construct the covariance matrix for a TMSV state.
 # Returns
 The covariance matrix for the TMSV state, in the qpqp ordering
 """
-function covariance_matrix(μ::Float64)
-    A = [
-        1+2μ 0;
-        0 1+2μ;
-    ]
-    B = [
-        2sqrt(μ*(μ+1)) 0;
-        0 -2sqrt(μ*(μ+1));
-    ]
-    return Matrix(
-        (1/2)*mortar(reshape([
-            A, B,
-            B, A
-        ], 2, 2))
-    )
-end
+covariance_matrix(μ::Float64) = [
+    0.5 + μ        0               sqrt(μ*(μ+1))  0;
+    0              0.5 + μ         0              -sqrt(μ*(μ+1));
+    sqrt(μ*(μ+1))  0               0.5 + μ        0;
+    0              -sqrt(μ*(μ+1))  0              0.5 + μ;
+]
 covariance_matrix(tmsv::TMSV) = covariance_matrix(tmsv.mean_photon)
 
 """
