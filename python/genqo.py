@@ -3,7 +3,8 @@
 from juliacall import Main as jl
 from juliacall import Pkg as jlPkg
 
-from dataclasses import dataclass
+from attrs import define, field
+from attrs.validators import le, ge
 
 import numpy as np
 
@@ -36,31 +37,15 @@ class GenqoParams:
         >>> zalm = ZALM()
         >>> zalm.set(mean_photon=1e-3)
         """
-        # Get valid field names for this dataclass
-        valid_fields = set(self.__dataclass_fields__.keys())
-        
-        # for key in kwargs.keys():
-        #     if key not in valid_fields:
-        #         raise AttributeError(
-        #             f"{self.__class__.__name__} has no parameter '{key}'. "
-        #             f"Valid parameters are: {', '.join(sorted(valid_fields))}"
-        #         )
         for key, value in kwargs.items():
-            if key in valid_fields:
-                setattr(self, key, value)
+            setattr(self, key, value)
         return self
     
 
-@dataclass
+@define
 class TMSV(GenqoParams):
-    mean_photon: float = 1e-2
-    detection_efficiency: float = 1.0
-
-    def __post_init__(self):
-        if self.mean_photon <= 0:
-            raise ValueError("mean_photon must be positive.")
-        if not (0 < self.detection_efficiency <= 1):
-            raise ValueError("detection_efficiency must be in (0, 1].")
+    mean_photon: float = field(default=1e-2, validator=ge(0.0))
+    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
 
     def covariance_matrix(self):
         return np.asarray(
@@ -82,20 +67,12 @@ class TMSV(GenqoParams):
         )
     
 
-@dataclass
+@define
 class SPDC(GenqoParams):
-    mean_photon: float = 1e-2
-    detection_efficiency: float = 1.0
-    bsm_efficiency: float = 1.0
-    outcoupling_efficiency: float = 1.0
-
-    def __post_init__(self):
-        if self.mean_photon <= 0:
-            raise ValueError("mean_photon must be positive.")
-        for eff_name in ["detection_efficiency", "bsm_efficiency", "outcoupling_efficiency"]:
-            eff_value = getattr(self, eff_name)
-            if not (0 < eff_value <= 1):
-                raise ValueError(f"{eff_name} must be in (0, 1].")
+    mean_photon: float = field(default=1e-2, validator=ge(0.0))
+    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    bsm_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    outcoupling_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
 
     def covariance_matrix(self):
         return np.asarray(
@@ -125,27 +102,15 @@ class SPDC(GenqoParams):
         )
     
 
-@dataclass
+@define
 class ZALM(GenqoParams):
-    mean_photon: float = 1e-2
+    mean_photon: float = field(default=1e-2, validator=ge(0.0))
     #schmidt_coeffs: list[float] = field(default_factory=lambda: [1.0])
-    detection_efficiency: float = 1.0
-    bsm_efficiency: float = 1.0
-    outcoupling_efficiency: float = 1.0
-    dark_counts: float = 0.0
+    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    bsm_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    outcoupling_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    dark_counts: float = field(default=0.0, validator=ge(0.0))
     #visibility: float = 1.0
-
-    def __post_init__(self):
-        if self.mean_photon <= 0:
-            raise ValueError("mean_photon must be positive.")
-        for eff_name in ["detection_efficiency", "bsm_efficiency", "outcoupling_efficiency"]:
-            eff_value = getattr(self, eff_name)
-            if not (0 < eff_value <= 1):
-                raise ValueError(f"{eff_name} must be in (0, 1].")
-        if self.dark_counts < 0:
-            raise ValueError("dark_counts must be non-negative.")
-        #if not (0 < self.visibility <= 1):
-        #    raise ValueError("visibility must be in (0, 1].")
     
     def covariance_matrix(self):
         return np.asarray(
