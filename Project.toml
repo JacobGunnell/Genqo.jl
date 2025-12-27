@@ -9,13 +9,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Nemo = "2edaba10-b0f1-5616-af89-8c11ac63239a"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 
-[extras]
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test", "BenchmarkTools"]
-
 [compat]
 BenchmarkTools = "1.6.3"
 BlockDiagonals = "0.2.0"
@@ -23,3 +16,10 @@ LinearAlgebra = "1.12.0"
 Nemo = "0.53.2"
 PythonCall = "0.9.31"
 Test = "1.11.0"
+
+[extras]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test", "BenchmarkTools"]

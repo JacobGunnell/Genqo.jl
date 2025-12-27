@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 
 import genqo as gqpy
-import python.genqo as gqjl
+import genqo_jl as gqjl
 
 
 @pytest.fixture

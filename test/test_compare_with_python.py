@@ -1,5 +1,5 @@
 import genqo as gqpy
-import python.genqo as gqjl
+import genqo_jl as gqjl
 
 import numpy as np
 
@@ -169,6 +169,6 @@ def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm_t
         k_function_matrix_py = zalm_py.results["k_function_matrix"]
 
         zalm_jl.set(**params)
-        k_function_matrix_jl = gqjl._k_function_matrix(zalm_jl.covariance_matrix())
+        k_function_matrix_jl = gqjl.k_function_matrix(zalm_jl.covariance_matrix())
 
         assert np.allclose(k_function_matrix_py, k_function_matrix_jl, atol=tol), error_with_params(params)

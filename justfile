@@ -1,10 +1,16 @@
-# Install genqo and its dependencies
+# Install genqo.jl and its Python wrapper
 install:
     julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
     just venv
     . python/.venv/bin/activate && \
-    pip install -r python/requirements.txt
+    pip install -e python/[test]
+
+# Run tests comparing Julia and Python genqo implementations
+test:
+    @echo "Running tests comparing Julia and Python genqo..."
+    . python/.venv/bin/activate && \
+    pytest test/test_compare_with_python.py
 
 # Run benchmarks for <func>, e.g. just bench spdc.spin_density_matrix (benchmarks all by default)
 bench func="":

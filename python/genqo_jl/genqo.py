@@ -152,7 +152,7 @@ class ZALM(GenqoParams):
         )
     
     
-def _k_function_matrix(covariance_matrix: np.ndarray) -> np.ndarray:
+def k_function_matrix(covariance_matrix: np.ndarray) -> np.ndarray:
     return np.asarray(
         jl.tools.k_function_matrix(
             jl.convert(jl.Matrix[jl.Float64], covariance_matrix)
