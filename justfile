@@ -13,7 +13,7 @@ bench func="":
     julia --project=. test/bench.jl "{{func}}"
 
     . python/.venv/bin/activate && \
-    pytest test/test_gqpy_bench.py::test_{{replace(func, '.', '__')}} --benchmark-json=.benchmarks/py-bench.json && \
+    pytest test/test_gqpy_bench.py{{ if func != "" { "::test_" + replace(func, '.', '__') } else { "" } }} --benchmark-json=.benchmarks/py-bench.json && \
     python test/plot_comparison.py
 
 # Create virtual environment for Python wrapper
