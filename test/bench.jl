@@ -1,6 +1,8 @@
 using Genqo
 using BenchmarkTools
 
+# Get optional function filter from command line argument
+func_filter = length(ARGS) > 0 ? ARGS[1] : ""
 
 uniform(min_val, max_val) = min_val + (max_val-min_val)*rand(Float64)
 log_uniform(min_exp, max_exp) = 10^uniform(min_exp, max_exp)
@@ -55,6 +57,20 @@ suite["zalm.fidelity"]               = @benchmarkable zalm.fidelity(z)          
 # Other benchmarks
 suite["tools.k_function_matrix"]     = @benchmarkable tools.k_function_matrix(cov)        setup=(cov=zalm.covariance_matrix(rand_zalm()))
 
+
+# Filter suite based on func_filter if provided
+if !isempty(func_filter)
+    filtered_suite = BenchmarkGroup()
+    for (name, benchmark) in suite
+        if occursin(func_filter, name)
+            filtered_suite[name] = benchmark
+        end
+    end
+    suite = filtered_suite
+    if isempty(suite)
+        @warn "No benchmarks matched filter: $func_filter"
+    end
+end
 
 results = run(suite)
 for (func, trial) in results
