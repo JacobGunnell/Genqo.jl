@@ -9,7 +9,7 @@ suite = BenchmarkGroup()
 
 
 # TMSV benchmarks
-rand_tmsv()::tmsv.TMSV = tmsv.TMSV(
+rand_tmsv() = tmsv.TMSV(
     log_uniform(-5, 1),
     uniform(0.5, 1.0),
 )
@@ -19,12 +19,13 @@ suite["tmsv.probability_success"]    = @benchmarkable tmsv.probability_success(t
 
 
 # SPDC benchmarks
-rand_spdc()::SPDC = spdc.SPDC(
+rand_spdc() = spdc.SPDC(
     log_uniform(-5, 1),
     uniform(0.5, 1.0),
     uniform(0.5, 1.0),
     uniform(0.5, 1.0),
 )
+nvec = [0,1,0,1]
 
 suite["spdc.covariance_matrix"]      = @benchmarkable spdc.covariance_matrix(s)           setup=(s=rand_spdc())
 suite["spdc.loss_bsm_matrix_fid"]    = @benchmarkable spdc.loss_bsm_matrix_fid(s)         setup=(s=rand_spdc())
@@ -33,7 +34,7 @@ suite["spdc.probability_success"]    = @benchmarkable spdc.probability_success(s
 
 
 # ZALM benchmarks
-rand_zalm()::ZALM = zalm.ZALM(
+rand_zalm() = zalm.ZALM(
     log_uniform(-5, 1),
     #[one(Float64)],
     uniform(0.5, 1.0),
