@@ -92,8 +92,6 @@ function W_fast(terms::Vector{Tuple{ComplexF64, Vector{Int}}}, Ainv::Matrix{Comp
     return elm
 end
 
-
-
 function permutation_matrix(permutations::Vector{Int})
     n = length(permutations)
     P = zeros(n, n)
@@ -131,10 +129,10 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
     n = 2sz
 
     # Views of Γinv blocks (Float64)
-    A  = @view Γinv[1:sz,      1:sz]
-    C  = @view Γinv[1:sz,      sz+1:n]
-    Cᵀ = @view Γinv[sz+1:n,    1:sz]
-    B  = @view Γinv[sz+1:n,    sz+1:n]
+    A  = @view Γinv[1:sz,    1:sz]
+    C  = @view Γinv[1:sz,    sz+1:n]
+    Cᵀ = @view Γinv[sz+1:n,  1:sz]
+    B  = @view Γinv[sz+1:n,  sz+1:n]
 
     # Build BB (16×16 ComplexF64) without intermediates
     BB = Matrix{ComplexF64}(undef, n, n)
@@ -150,17 +148,17 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
         abd  = a - b
 
         # BB block entries (each multiplied by 1/2 overall)
-        BB[i,       j      ] = 0.5*a + (im/4)*csum                 # (1/2)*(A + (i/2)(C+Ct))
-        BB[i,       j+sz   ] = 0.5*c - (im/4)*abd                  # (1/2)*(C - (i/2)(A-B))
-        BB[i+sz,    j      ] = 0.5*ct - (im/4)*abd                 # (1/2)*(Ct - (i/2)(A-B))
-        BB[i+sz,    j+sz   ] = 0.5*b - (im/4)*csum                 # (1/2)*(B - (i/2)(C+Ct))
+        BB[i,     j     ] = 0.5*a  + (im/4)*csum  # (1/2)*(A  + (i/2)(C+Ct))
+        BB[i,     j+sz  ] = 0.5*c  - (im/4)*abd   # (1/2)*(C  - (i/2)(A-B))
+        BB[i+sz,  j     ] = 0.5*ct - (im/4)*abd   # (1/2)*(Ct - (i/2)(A-B))
+        BB[i+sz,  j+sz  ] = 0.5*b  - (im/4)*csum  # (1/2)*(B  - (i/2)(C+Ct))
     end
 
     # Return block diagonal [BB, conj(BB)] as a plain 32×32 matrix
     K = zeros(ComplexF64, 2n, 2n)
     @inbounds for j in 1:n, i in 1:n
         v = BB[i,j]
-        K[i,   j   ] = v
+        K[i,   j  ] = v
         K[i+n, j+n] = conj(v)
     end
 
