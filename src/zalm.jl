@@ -215,7 +215,7 @@ function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, 
     Cd₆ = (α[6]*β[6]*η[6])^(nvec[6])/factorial(nvec[6])
     C = Cd₃*Cd₄*Cd₅*Cd₆*Ca*Cb
 
-    # Sum over wick partitions
+    # Sum over wick partitions (compile polynomial into fast terms)
     return W(C, Ainv)
 end
 
@@ -321,16 +321,16 @@ function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
     Coef = 1/(D1*D2*D3)
 
     # TODO: should this indexing be changed to 1-based? Or is there some mathematical meaning to the 0 index?
-    C1 = moment_vector[0]
-    C2 = moment_vector[9]
-    C3 = moment_vector[10]
-    C4 = moment_vector[14]
+    C1 = moment_terms[0]
+    C2 = moment_terms[9]
+    C3 = moment_terms[10]
+    C4 = moment_terms[14]
 
     return real(Coef * (
-        ηᵇ^2 * (1-dark_counts)^4 * W(C1, Ainv) +
-        ηᵇ * dark_counts * (1-dark_counts)^3 * W(C2, Ainv) +
-        ηᵇ * dark_counts * (1-dark_counts)^3 * W(C3, Ainv) +
-        dark_counts^2 * (1-dark_counts)^2 * W(C4, Ainv)
+        ηᵇ^2 * (1-dark_counts)^4 * W_fast(C1, Ainv) +
+        ηᵇ * dark_counts * (1-dark_counts)^3 * W_fast(C2, Ainv) +
+        ηᵇ * dark_counts * (1-dark_counts)^3 * W_fast(C3, Ainv) +
+        dark_counts^2 * (1-dark_counts)^2 * W_fast(C4, Ainv)
     ))
 end
 probability_success(zalm::ZALM) = probability_success(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, zalm.dark_counts)
