@@ -172,8 +172,8 @@ function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, 
 
     C = Ca*Cb
 
-    # Sum over wick partitions
-    return W(C, Ainv)
+    # Sum over wick partitions (compile polynomial into fast terms)
+    return W_fast(compile_W_terms(C), Ainv)
 end
 
 """
