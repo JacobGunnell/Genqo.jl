@@ -290,7 +290,7 @@ end
 # Precompiled terms for fast Wick evaluation for specific polynomials (avoids Nemo monomial parsing per call)
 # current precompiled polynomials: all in moment_vector
 const moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}} = Dict(
-    k => compile_W_terms(v) for (k, v) in moment_vector
+    k => extract_W_terms(v) for (k, v) in moment_vector
 )
 
 """
@@ -351,10 +351,10 @@ function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
 
     # ---- Compute W terms (cached) ----
     Fsum =
-        W_fast(moment_terms[1], Ainv1) +
-        W_fast(moment_terms[2], Ainv1) +
-        W_fast(moment_terms[3], Ainv1) +
-        W_fast(moment_terms[4], Ainv1)
+        W(moment_terms[1], Ainv1) +
+        W(moment_terms[2], Ainv1) +
+        W(moment_terms[3], Ainv1) +
+        W(moment_terms[4], Ainv1)
 
     # --- A2 (trace / generation normalization loss) ---
     A2 = K + loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
@@ -362,7 +362,7 @@ function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
     Ainv2 = inv(factoredA2)
     N2 = sqrt(det(factoredA2)) # reuses factorization
     
-    Trc = W_fast(moment_terms[0], Ainv2)  # <-- cached + defined
+    Trc = W(moment_terms[0], Ainv2)  # <-- cached + defined
 
     N1 = (ηᵈ * ηᵗ) ^ 2
     coef = N1 * N2 / (2 * D1)

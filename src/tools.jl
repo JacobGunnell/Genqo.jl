@@ -119,17 +119,8 @@ function wick_out(coef::ComplexF64, moment_vector::Vector{Int}, Ainv::Matrix{Com
     return coeff_sum * coef
 end
 
-function W(C::Nemo.Generic.MPoly{Nemo.ComplexFieldElem}, Ainv::Matrix{ComplexF64})
-    elm = zero(ComplexF64)
-    n_vars = nvars(parent(C))
-    for (mon, coeff) in zip(monomials(C), coefficients(C))
-        elm += wick_out(ComplexF64(coeff), [i for i in 1:n_vars if exponent(mon, 1, i) == 1], Ainv)
-    end
-    return elm
-end
-
 # Turn a polynomial C into a reusable list of (coef::ComplexF64, idxs::Vector{Int})
-function compile_W_terms(C::Nemo.Generic.MPoly{Nemo.ComplexFieldElem})
+function extract_W_terms(C::Nemo.Generic.MPoly{Nemo.ComplexFieldElem})
     n_vars = nvars(parent(C))
     terms = Vector{Tuple{ComplexF64, Vector{Int}}}()
 
@@ -146,8 +137,17 @@ function compile_W_terms(C::Nemo.Generic.MPoly{Nemo.ComplexFieldElem})
     return terms
 end
 
+function W(C::Nemo.Generic.MPoly{Nemo.ComplexFieldElem}, Ainv::Matrix{ComplexF64})
+    elm = zero(ComplexF64)
+    n_vars = nvars(parent(C))
+    for (mon, coeff) in zip(monomials(C), coefficients(C))
+        elm += wick_out(ComplexF64(coeff), [i for i in 1:n_vars if exponent(mon, 1, i) == 1], Ainv)
+    end
+    return elm
+end
+
 # Fast evaluator that avoids Nemo work (uses precompiled terms of specific polynomials)
-function W_fast(terms::Vector{Tuple{ComplexF64, Vector{Int}}}, Ainv::Matrix{ComplexF64})
+function W(terms::Vector{Tuple{ComplexF64, Vector{Int}}}, Ainv::Matrix{ComplexF64})
     elm = zero(ComplexF64)
     @inbounds for (coef, idxs) in terms
         elm += wick_out(coef, idxs, Ainv)
@@ -228,6 +228,6 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
     return K
 end
 
-export sweep, wick_out, W, compile_W_terms, W_fast, permutation_matrix, reorder, k_function_matrix
+export sweep, wick_out, W, extract_W_terms, permutation_matrix, reorder, k_function_matrix
 
 end # module
