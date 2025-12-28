@@ -216,7 +216,7 @@ function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, 
     C = Cd₃*Cd₄*Cd₅*Cd₆*Ca*Cb
 
     # Sum over wick partitions (compile polynomial into fast terms)
-    return W_fast(compile_W_terms(C), Ainv)
+    return W(C, Ainv)
 end
 
 """

@@ -103,7 +103,7 @@ function probability_success(μ::Float64, ηᵈ::Float64)
 
     C = moment_vector(1)
 
-    return real(Coef * W_fast(compile_W_terms(C), Ainv))
+    return real(Coef * W(C, Ainv))
 end
 probability_success(tmsv::TMSV) = probability_success(tmsv.mean_photon, tmsv.detection_efficiency)
 
