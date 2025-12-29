@@ -45,42 +45,39 @@ R, generators = polynomial_ring(CC, all_qps)
 α = (qai + i .* pai) / sqrt(2)
 β = (qbi - i .* pbi) / sqrt(2)
 
+# Symplective matrices that represent 50/50 beamsplitters between the bell state modes
+_S35 = begin
+    Id2 = Matrix{Float64}(I, 2, 2)
+    St35 = [
+        1/sqrt(2)   0  1/sqrt(2)  0;
+        0           1  0          0;
+        -1/sqrt(2)  0  1/sqrt(2)  0;
+        0           0  0          1;
+    ]
+    Matrix(BlockDiagonal([Id2, St35, Id2, Id2, St35, Id2]))
+end
+_S46 = begin
+    Id2 = Matrix{Float64}(I, 2, 2)
+    St46 = [
+        1  0           0  0;
+        0  1/sqrt(2)   0  1/sqrt(2);
+        0  0           1  0;
+        0  -1/sqrt(2)  0  1/sqrt(2);
+    ]
+    Matrix(BlockDiagonal([Id2, St46, Id2, Id2, St46, Id2]))
+end
+
 """
 Calculate the covariance matrix of the single-mode ZALM source
 """
 function covariance_matrix(μ::Float64)
     # Initial ZALM covariance matrix in qpqp ordering
-    covar_qpqp = begin
-        spdc_covar = spdc.covariance_matrix(μ)
-        BlockDiagonal([spdc_covar, spdc_covar])
-    end
+    spdc_covar = spdc.covariance_matrix(μ)
+    covar_qpqp = Matrix(BlockDiagonal([spdc_covar, spdc_covar]))
 
-    # Reorder qpqp → qqpp
-    covar_qqpp = reorder(covar_qpqp)
-    
-    # Apply the symplective matrices that represent 50/50 beamsplitters between the bell state modes
-    S35 = begin
-        Id2 = Matrix{Float64}(I, 2, 2)
-        St35 = [
-            1/sqrt(2) 0 1/sqrt(2) 0;
-            0 1 0 0;
-            -1/sqrt(2) 0 1/sqrt(2) 0;
-            0 0 0 1;
-        ]
-        BlockDiagonal([Id2, St35, Id2, Id2, St35, Id2])
-    end
-    S46 = begin
-        Id2 = Matrix{Float64}(I, 2, 2)
-        St46 = [
-            1 0 0 0;
-            0 1/sqrt(2) 0 1/sqrt(2);
-            0 0 1 0;
-            0 -1/sqrt(2) 0 1/sqrt(2);
-        ]
-        BlockDiagonal([Id2, St46, Id2, Id2, St46, Id2])
-    end
-
-    return S46 * S35 * covar_qqpp * S35' * S46'
+    # Reorder qpqp → qqpp and apply beamsplitters
+    covar_qqpp = reorder(covar_qpqp) 
+    return _S46 * _S35 * covar_qqpp * _S35' * _S46'
 end
 covariance_matrix(zalm::ZALM) = covariance_matrix(zalm.mean_photon)
 

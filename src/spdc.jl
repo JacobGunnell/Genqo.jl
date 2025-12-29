@@ -42,18 +42,16 @@ R, generators = polynomial_ring(CC, all_qps)
 α = (qai + i .* pai) / sqrt(2)
 β = (qbi - i .* pbi) / sqrt(2)
 
+_perm_matrix_12785634 = permutation_matrix([1,2,7,8,5,6,3,4])
+
 """
 Calculate the covariance matrix of the SPDC source
 """
 function covariance_matrix(μ::Float64)
-    covar = begin
-        tmsv_covar = tmsv.covariance_matrix(μ)
-        BlockDiagonal([tmsv_covar, tmsv_covar])
-    end
+    tmsv_covar = tmsv.covariance_matrix(μ)
+    covar = Matrix(BlockDiagonal([tmsv_covar, tmsv_covar]))
 
-    perm_indices = [1,2,7,8,5,6,3,4]
-    perm_matrix = permutation_matrix(perm_indices)
-    return perm_matrix * covar * perm_matrix'
+    return _perm_matrix_12785634 * covar * _perm_matrix_12785634'
 end
 covariance_matrix(spdc::SPDC) = covariance_matrix(spdc.mean_photon)
 
