@@ -1,5 +1,3 @@
-# TODO: find a way to cache function results
-
 module zalm
 
 using BlockDiagonals
@@ -11,17 +9,16 @@ import ..spdc
 using ..tools
 
 
-struct ZALM
-    mean_photon::Float64
+Base.@kwdef struct ZALM
+    mean_photon::Float64 = 1e-2
     #schmidt_coeffs::Vector{Float64}
-    detection_efficiency::Float64
-    bsm_efficiency::Float64
-    outcoupling_efficiency::Float64
-    dark_counts::Float64
-    #visibility::Float64
+    detection_efficiency::Float64 = 1.0
+    bsm_efficiency::Float64 = 1.0
+    outcoupling_efficiency::Float64 = 1.0
+    dark_counts::Float64 = 0.0
+    #visibility::Float64 = 1.0
 end
-
-ZALM(zalm_py::Py) = ZALM(
+Base.convert(::Type{ZALM}, zalm_py::Py) = ZALM(
     pyconvert(Float64, zalm_py.mean_photon),
     #pyconvert(Vector{Float64}, zalm_py.schmidt_coeffs),
     pyconvert(Float64, zalm_py.detection_efficiency),

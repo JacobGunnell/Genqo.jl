@@ -50,20 +50,20 @@ class TMSV(GenqoParams):
     def covariance_matrix(self):
         return np.asarray(
             jl.tmsv.covariance_matrix(
-                jl.tmsv.TMSV(self)
+                jl.convert(jl.tmsv.TMSV, self)
             )
         )
     
     def loss_matrix_pgen(self):
         return np.asarray(
             jl.tmsv.loss_matrix_pgen(
-                jl.tmsv.TMSV(self)
+                jl.convert(jl.tmsv.TMSV, self)
             )
         )
     
     def probability_success(self):
         return jl.tmsv.probability_success(
-            jl.tmsv.TMSV(self)
+            jl.convert(jl.tmsv.TMSV, self)
         )
     
 
@@ -77,28 +77,28 @@ class SPDC(GenqoParams):
     def covariance_matrix(self):
         return np.asarray(
             jl.spdc.covariance_matrix(
-                jl.spdc.SPDC(self)
+                jl.convert(jl.spdc.SPDC, self)
             )
         )
     
     def loss_bsm_matrix_fid(self):
         return np.asarray(
             jl.spdc.loss_bsm_matrix_fid(
-                jl.spdc.SPDC(self)
+                jl.convert(jl.spdc.SPDC, self)
             )
         )
     
     def spin_density_matrix(self, nvec):
         return np.asarray(
             jl.spdc.spin_density_matrix(
-                jl.spdc.SPDC(self),
+                jl.convert(jl.spdc.SPDC, self),
                 jl.convert(jl.Vector[jl.Int], nvec)
             )
         )
     
     def probability_success(self):
         return jl.spdc.probability_success(
-            jl.spdc.SPDC(self)
+            jl.convert(jl.spdc.SPDC, self)
         )
     
 
@@ -115,40 +115,40 @@ class ZALM(GenqoParams):
     def covariance_matrix(self):
         return np.asarray(
             jl.zalm.covariance_matrix(
-                jl.zalm.ZALM(self)
+                jl.convert(jl.zalm.ZALM, self)
             )
         )
     
     def loss_bsm_matrix_fid(self):
         return np.asarray(
             jl.zalm.loss_bsm_matrix_fid(
-                jl.zalm.ZALM(self)
+                jl.convert(jl.zalm.ZALM, self)
             )
         )
 
     def loss_bsm_matrix_pgen(self):
         return np.asarray(
             jl.zalm.loss_bsm_matrix_pgen(
-                jl.zalm.ZALM(self)
+                jl.convert(jl.zalm.ZALM, self)
             )
         )
 
     def spin_density_matrix(self, nvec):
         return np.asarray(
             jl.zalm.spin_density_matrix(
-                jl.zalm.ZALM(self),
+                jl.convert(jl.zalm.ZALM, self),
                 jl.convert(jl.Vector[jl.Int], nvec)
             )
         )
     
     def probability_success(self):
         return jl.zalm.probability_success(
-            jl.zalm.ZALM(self)
+            jl.convert(jl.zalm.ZALM, self)
         )
     
     def fidelity(self):
         return jl.zalm.fidelity(
-            jl.zalm.ZALM(self)
+            jl.convert(jl.zalm.ZALM, self)
         )
     
     

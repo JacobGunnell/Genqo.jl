@@ -9,14 +9,13 @@ import ..tmsv
 using ..tools
 
 
-struct SPDC
-    mean_photon::Float64
-    detection_efficiency::Float64
-    bsm_efficiency::Float64
-    outcoupling_efficiency::Float64
+Base.@kwdef struct SPDC
+    mean_photon::Float64 = 1e-2
+    detection_efficiency::Float64 = 1.0
+    bsm_efficiency::Float64 = 1.0
+    outcoupling_efficiency::Float64 = 1.0
 end
-
-SPDC(spdc_py::Py) = SPDC(
+Base.convert(::Type{SPDC}, spdc_py::Py) = SPDC(
     pyconvert(Float64, spdc_py.mean_photon),
     #pyconvert(Vector{Float64}, spdc_py.schmidt_coeffs),
     pyconvert(Float64, spdc_py.detection_efficiency),

@@ -7,13 +7,12 @@ using PythonCall
 using ..tools
 
 
-struct TMSV
-    mean_photon::Float64
-    detection_efficiency::Float64
+Base.@kwdef struct TMSV
+    mean_photon::Float64 = 1e-2
+    detection_efficiency::Float64 = 1.0
 end
-
-TMSV(tmsv_py::Py) = TMSV(
-    pyconvert(Float64, tmsv_py.mean_photon),
+Base.convert(::Type{TMSV}, tmsv_py::Py) = TMSV(
+    pyconvert(Float64, tmsv_py.mean_photon), 
     pyconvert(Float64, tmsv_py.detection_efficiency),
 )
 
