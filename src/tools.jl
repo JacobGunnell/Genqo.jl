@@ -3,70 +3,7 @@ module tools
 using LinearAlgebra
 using Nemo
 using BlockDiagonals
-using ThreadsX
-using ProgressMeter
 
-
-"""
-    sweep(func::Function, param_ranges...::AbstractVector; parallel=false, progress=false, desc="Sweeping")
-
-Sweep a function `func` over one or more parameter ranges. For multiple ranges, 
-computes the Cartesian product and applies the function to all combinations.
-
-# Parameters
-- `func`: Function that takes parameter value(s) and returns a result
-- `param_ranges`: One or more vectors of parameter values to sweep over
-- `parallel`: Whether to use multi-threading (default: false)
-- `progress`: Whether to show a progress bar (default: false)
-- `desc`: Description for the progress bar (default: "Sweeping")
-
-# Returns
-Array of results with dimensions matching the input parameter ranges.
-For a single range, returns a 1D array. For multiple ranges, returns a 
-multi-dimensional array where dimension `i` corresponds to `param_ranges[i]`.
-
-# Examples
-```julia
-# Single parameter sweep
-results = tools.sweep([1e-3, 1e-2, 1e-1]) do μ
-    tmsv.probability_success(μ, 0.9)
-end
-# results is a 3-element Vector
-
-# Two parameter sweep (Cartesian product)
-results = tools.sweep([1e-3, 1e-2, 1e-1], [0.8, 0.9, 1.0]) do μ, η
-    tmsv.probability_success(μ, η)
-end
-# results is a 3×3 Matrix
-
-# Three parameter sweep with parallelization and progress bar
-results = tools.sweep([1e-3, 1e-2], [0.8, 0.9], [0.5, 0.6, 0.7]; parallel=true, progress=true) do μ, η, ζ
-    complex_calculation(μ, η, ζ)
-end
-# results is a 2×2×3 Array
-```
-"""
-function sweep(func::Function, param_ranges::AbstractVector...; parallel=false, progress=false, desc="Sweeping")
-    # Create Cartesian product of all parameter ranges
-    param_grid = collect(Iterators.product(param_ranges...))
-    
-    # Apply function to each combination, unpacking the tuple of parameters
-    if progress
-        if parallel
-            results = @showprogress desc ThreadsX.map(params -> func(params...), param_grid)
-        else
-            results = @showprogress desc map(params -> func(params...), param_grid)
-        end
-    else
-        if parallel
-            results = ThreadsX.map(params -> func(params...), param_grid)
-        else
-            results = map(params -> func(params...), param_grid)
-        end
-    end
-    
-    return results
-end
 
 """
 Precompute Wick partitions (perfect pairings) of 1:n
@@ -228,6 +165,6 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
     return K
 end
 
-export sweep, wick_out, W, extract_W_terms, permutation_matrix, reorder, k_function_matrix
+export wick_out, W, extract_W_terms, permutation_matrix, reorder, k_function_matrix
 
 end # module
