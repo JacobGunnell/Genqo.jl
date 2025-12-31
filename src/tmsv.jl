@@ -7,13 +7,14 @@ using PythonCall
 using ..tools
 
 
-Base.@kwdef struct TMSV
-    mean_photon::Float64 = 1e-2
-    detection_efficiency::Float64 = 1.0
+# TODO: generalize sweep handling to support explicit arrays of sweep parameters and not just StepRangeLen
+Base.@kwdef mutable struct TMSV <: GenqoBase
+    mean_photon::Union{AbstractFloat, StepRangeLen} = 1e-2
+    detection_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
 end
 Base.convert(::Type{TMSV}, tmsv_py::Py) = TMSV(
-    pyconvert(Float64, tmsv_py.mean_photon), 
-    pyconvert(Float64, tmsv_py.detection_efficiency),
+    tools._pyconvert_sweepable(Float64, tmsv_py.mean_photon), 
+    tools._pyconvert_sweepable(Float64, tmsv_py.detection_efficiency),
 )
 
 # Global canonical position and momentum variables

@@ -9,18 +9,18 @@ import ..tmsv
 using ..tools
 
 
-Base.@kwdef struct SPDC
-    mean_photon::Float64 = 1e-2
-    detection_efficiency::Float64 = 1.0
-    bsm_efficiency::Float64 = 1.0
-    outcoupling_efficiency::Float64 = 1.0
+Base.@kwdef mutable struct SPDC <: GenqoBase
+    mean_photon::Union{AbstractFloat, StepRangeLen} = 1e-2
+    detection_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
+    bsm_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
+    outcoupling_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
 end
 Base.convert(::Type{SPDC}, spdc_py::Py) = SPDC(
-    pyconvert(Float64, spdc_py.mean_photon),
+    tools._pyconvert_sweepable(Float64, spdc_py.mean_photon),
     #pyconvert(Vector{Float64}, spdc_py.schmidt_coeffs),
-    pyconvert(Float64, spdc_py.detection_efficiency),
-    pyconvert(Float64, spdc_py.bsm_efficiency),
-    pyconvert(Float64, spdc_py.outcoupling_efficiency),
+    tools._pyconvert_sweepable(Float64, spdc_py.detection_efficiency),
+    tools._pyconvert_sweepable(Float64, spdc_py.bsm_efficiency),
+    tools._pyconvert_sweepable(Float64, spdc_py.outcoupling_efficiency),
     #pyconvert(Float64, spdc_py.dark_counts),
     #pyconvert(Float64, spdc_py.visibility),
 )

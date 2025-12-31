@@ -3,8 +3,9 @@
 from juliacall import Main as jl
 from juliacall import Pkg as jlPkg
 
-from attrs import define, field
+from attrs import define, field, fields
 from attrs.validators import le, ge
+from functools import wraps
 
 import numpy as np
 
@@ -12,7 +13,55 @@ jlPkg.activate(".")
 jl.seval("using Genqo")
 
 
-class GenqoParams:
+# Class telling genqo to sweep a parameter
+class sweep:
+    def __init__(self, start: float, stop: float, length: int) -> None:
+        self.start = start
+        self.stop = stop
+        self.length = length
+
+    def __le__(self, other: float) -> bool:
+        return self.start <= other and self.stop <= other
+    
+    def __ge__(self, other: float) -> bool:
+        return self.start >= other and self.stop >= other
+
+# Decorator to support sweeping by setting a particular parameter to a sweep object: zalm.mean_photon = gq.sweep(1e-4, 1e-2, 100)
+def _sweepable(func: callable) -> callable:
+    cls = func.__qualname__.split(".")[0]
+    module = cls.lower()
+    jl_module = getattr(jl, module)
+    jl_cls_type = getattr(jl_module, cls)
+        
+    @wraps(func)
+    def wrapper(self, _func_name: str = func.__name__):
+        # If no sweeping is required, call the function once directly
+        if not any(isinstance(getattr(self, param.name), sweep) for param in fields(self.__class__)):
+            return func(self)
+
+        # If sweeping is required, perform fast broadcast sweep in Julia
+        else:
+            # TODO: support function args other than self
+            # converted_args = []
+            # for arg in args:
+            #     if (jl_type := _jl_types.get(type(arg))) is not None:
+            #         converted_args.append(jl.convert(jl_type, arg))
+            #     else:
+            #         converted_args.append(arg)
+
+            # TODO: test to see if there's a problem here with the returned array elements still being Julia objects
+            return np.asarray(
+                jl.broadcast(
+                    getattr(jl_module, _func_name),
+                    jl.convert(jl_cls_type, self),
+                    # *converted_args,
+                )
+            )
+
+    return wrapper
+    
+
+class GenqoBase:
     @classmethod
     def from_dict(cls, params: dict):
         """
@@ -43,52 +92,57 @@ class GenqoParams:
     
 
 @define
-class TMSV(GenqoParams):
-    mean_photon: float = field(default=1e-2, validator=ge(0.0))
-    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+class TMSV(GenqoBase):
+    mean_photon: float | sweep = field(default=1e-2, validator=ge(0.0))
+    detection_efficiency: float | sweep = field(default=1.0, validator=[ge(0.0), le(1.0)])
 
-    def covariance_matrix(self):
+    @_sweepable
+    def covariance_matrix(self) -> np.ndarray:
         return np.asarray(
             jl.tmsv.covariance_matrix(
                 jl.convert(jl.tmsv.TMSV, self)
             )
         )
     
-    def loss_matrix_pgen(self):
+    @_sweepable
+    def loss_matrix_pgen(self) -> np.ndarray:
         return np.asarray(
             jl.tmsv.loss_matrix_pgen(
                 jl.convert(jl.tmsv.TMSV, self)
             )
         )
     
-    def probability_success(self):
+    @_sweepable
+    def probability_success(self) -> float:
         return jl.tmsv.probability_success(
             jl.convert(jl.tmsv.TMSV, self)
         )
     
 
 @define
-class SPDC(GenqoParams):
+class SPDC(GenqoBase):
     mean_photon: float = field(default=1e-2, validator=ge(0.0))
     detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
     bsm_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
     outcoupling_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
 
-    def covariance_matrix(self):
+    @_sweepable
+    def covariance_matrix(self) -> np.ndarray:
         return np.asarray(
             jl.spdc.covariance_matrix(
                 jl.convert(jl.spdc.SPDC, self)
             )
         )
     
-    def loss_bsm_matrix_fid(self):
+    @_sweepable
+    def loss_bsm_matrix_fid(self) -> np.ndarray:
         return np.asarray(
             jl.spdc.loss_bsm_matrix_fid(
                 jl.convert(jl.spdc.SPDC, self)
             )
         )
     
-    def spin_density_matrix(self, nvec):
+    def spin_density_matrix(self, nvec: np.ndarray) -> np.ndarray:
         return np.asarray(
             jl.spdc.spin_density_matrix(
                 jl.convert(jl.spdc.SPDC, self),
@@ -96,14 +150,15 @@ class SPDC(GenqoParams):
             )
         )
     
-    def probability_success(self):
+    @_sweepable
+    def probability_success(self) -> float:
         return jl.spdc.probability_success(
             jl.convert(jl.spdc.SPDC, self)
         )
     
 
 @define
-class ZALM(GenqoParams):
+class ZALM(GenqoBase):
     mean_photon: float = field(default=1e-2, validator=ge(0.0))
     #schmidt_coeffs: list[float] = field(default_factory=lambda: [1.0])
     detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
@@ -112,28 +167,31 @@ class ZALM(GenqoParams):
     dark_counts: float = field(default=0.0, validator=ge(0.0))
     #visibility: float = 1.0
     
-    def covariance_matrix(self):
+    @_sweepable
+    def covariance_matrix(self) -> np.ndarray:
         return np.asarray(
             jl.zalm.covariance_matrix(
                 jl.convert(jl.zalm.ZALM, self)
             )
         )
     
-    def loss_bsm_matrix_fid(self):
+    @_sweepable
+    def loss_bsm_matrix_fid(self) -> np.ndarray:
         return np.asarray(
             jl.zalm.loss_bsm_matrix_fid(
                 jl.convert(jl.zalm.ZALM, self)
             )
         )
 
-    def loss_bsm_matrix_pgen(self):
+    @_sweepable
+    def loss_bsm_matrix_pgen(self) -> np.ndarray:
         return np.asarray(
             jl.zalm.loss_bsm_matrix_pgen(
                 jl.convert(jl.zalm.ZALM, self)
             )
         )
 
-    def spin_density_matrix(self, nvec):
+    def spin_density_matrix(self, nvec: np.ndarray) -> np.ndarray:
         return np.asarray(
             jl.zalm.spin_density_matrix(
                 jl.convert(jl.zalm.ZALM, self),
@@ -141,12 +199,14 @@ class ZALM(GenqoParams):
             )
         )
     
-    def probability_success(self):
+    @_sweepable
+    def probability_success(self) -> float:
         return jl.zalm.probability_success(
             jl.convert(jl.zalm.ZALM, self)
         )
     
-    def fidelity(self):
+    @_sweepable
+    def fidelity(self) -> float:
         return jl.zalm.fidelity(
             jl.convert(jl.zalm.ZALM, self)
         )

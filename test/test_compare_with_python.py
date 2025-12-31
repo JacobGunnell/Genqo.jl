@@ -125,7 +125,7 @@ def test_zalm__loss_bsm_matrix_pgen(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm
         assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
 
 def test_zalm__spin_density_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm_test_cases: list[dict]) -> None:
-    nvec = [1, 0, 1, 1, 0, 0, 1, 0]
+    nvec = [1,0,1,1,0,0,1,0]
     for params in zalm_test_cases:
         zalm_py.params.update(params)
         zalm_py.run()
@@ -172,3 +172,20 @@ def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm_t
         k_function_matrix_jl = gqjl.k_function_matrix(zalm_jl.covariance_matrix())
 
         assert np.allclose(k_function_matrix_py, k_function_matrix_jl, atol=tol), error_with_params(params)
+
+def test_sweep_1d(tmsv_py: gqpy.TMSV, tmsv_jl: gqjl.TMSV) -> None:
+    tmsv_py.params["detection_efficiency"] = 0.9
+    probability_success_py = []
+    for mean_photon in np.linspace(1e-4, 1e-2, 100):
+        tmsv_py.params["mean_photon"] = mean_photon
+        tmsv_py.run()
+        tmsv_py.calculate_probability_success()
+        probability_success_py.append(tmsv_py.results["probability_success"])
+
+    tmsv_jl.set(
+        mean_photon = gqjl.sweep(1e-4, 1e-2, 100),
+        detection_efficiency = 0.9
+    )
+    probability_success_jl = tmsv_jl.probability_success()
+
+    assert np.allclose(probability_success_py, probability_success_jl, atol=tol), f"Python-Julia sweep comparison failed for mean_photon={mean_photon}"

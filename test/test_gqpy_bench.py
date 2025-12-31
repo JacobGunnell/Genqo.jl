@@ -56,3 +56,11 @@ def test_zalm__loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, benchmark):
 def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, benchmark):
     zalm_py.calculate_covariance_matrix()
     benchmark(zalm_py.calculate_k_function_matrix)
+
+def test_sweep_1d(tmsv_py: gqpy.TMSV, benchmark):
+    def sweep_1d():
+        for mp in np.linspace(1e-4, 1e-2, 100):
+            tmsv_py.params["mean_photon"] = mp
+            tmsv_py.run()
+            tmsv_py.calculate_probability_success()
+    benchmark(sweep_1d)

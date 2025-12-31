@@ -9,23 +9,23 @@ import ..spdc
 using ..tools
 
 
-Base.@kwdef struct ZALM
-    mean_photon::Float64 = 1e-2
+Base.@kwdef mutable struct ZALM <: GenqoBase
+    mean_photon::Union{AbstractFloat, StepRangeLen} = 1e-2
     #schmidt_coeffs::Vector{Float64}
-    detection_efficiency::Float64 = 1.0
-    bsm_efficiency::Float64 = 1.0
-    outcoupling_efficiency::Float64 = 1.0
-    dark_counts::Float64 = 0.0
-    #visibility::Float64 = 1.0
+    detection_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
+    bsm_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
+    outcoupling_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
+    dark_counts::Union{AbstractFloat, StepRangeLen} = 0.0
+    #visibility::Union{AbstractFloat, StepRangeLen} = 1.0
 end
 Base.convert(::Type{ZALM}, zalm_py::Py) = ZALM(
-    pyconvert(Float64, zalm_py.mean_photon),
+    tools._pyconvert_sweepable(Float64, zalm_py.mean_photon),
     #pyconvert(Vector{Float64}, zalm_py.schmidt_coeffs),
-    pyconvert(Float64, zalm_py.detection_efficiency),
-    pyconvert(Float64, zalm_py.bsm_efficiency),
-    pyconvert(Float64, zalm_py.outcoupling_efficiency),
-    pyconvert(Float64, zalm_py.dark_counts),
-    #pyconvert(Float64, zalm_py.visibility),
+    tools._pyconvert_sweepable(Float64, zalm_py.detection_efficiency),
+    tools._pyconvert_sweepable(Float64, zalm_py.bsm_efficiency),
+    tools._pyconvert_sweepable(Float64, zalm_py.outcoupling_efficiency),
+    tools._pyconvert_sweepable(Float64, zalm_py.dark_counts),
+    #tools._pyconvert_sweepable(Float64, zalm_py.visibility),
 )
 
 # Global canonical position and momentum variables
