@@ -57,10 +57,24 @@ def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, benchmark):
     zalm_py.calculate_covariance_matrix()
     benchmark(zalm_py.calculate_k_function_matrix)
 
-def test_sweep_1d(tmsv_py: gqpy.TMSV, benchmark):
-    def sweep_1d():
+def test_linsweep_1d(tmsv_py: gqpy.TMSV, benchmark):
+    def linsweep_1d():
+        probability_success = []
         for mp in np.linspace(1e-4, 1e-2, 100):
             tmsv_py.params["mean_photon"] = mp
             tmsv_py.run()
             tmsv_py.calculate_probability_success()
-    benchmark(sweep_1d)
+            probability_success.append(tmsv_py.results["probability_success"])
+        return probability_success
+    benchmark(linsweep_1d)
+
+def test_logsweep_1d(tmsv_py: gqpy.TMSV, benchmark):
+    def logsweep_1d():
+        probability_success = []
+        for mp in np.logspace(-4, -2, 100):
+            tmsv_py.params["mean_photon"] = mp
+            tmsv_py.run()
+            tmsv_py.calculate_probability_success()
+            probability_success.append(tmsv_py.results["probability_success"])
+        return probability_success
+    benchmark(logsweep_1d)

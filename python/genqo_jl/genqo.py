@@ -3,6 +3,7 @@
 from juliacall import Main as jl
 from juliacall import Pkg as jlPkg
 
+from abc import ABC
 from attrs import define, field, fields
 from attrs.validators import le, ge
 from functools import wraps
@@ -14,7 +15,7 @@ jl.seval("using Genqo")
 
 
 # Class telling genqo to sweep a parameter
-class sweep:
+class sweep(ABC):
     def __init__(self, start: float, stop: float, length: int) -> None:
         self.start = start
         self.stop = stop
@@ -26,7 +27,23 @@ class sweep:
     def __ge__(self, other: float) -> bool:
         return self.start >= other and self.stop >= other
 
-# Decorator to support sweeping by setting a particular parameter to a sweep object: zalm.mean_photon = gq.sweep(1e-4, 1e-2, 100)
+    def __len__(self) -> int:
+        """Return the length of the sweep."""
+        return self.length
+
+class linsweep(sweep):
+    """Class representing a linear sweep from start to stop with a given length."""    
+    def __array__(self) -> np.ndarray:
+        """Convert sweep to numpy array for use with matplotlib and numpy operations."""
+        return np.linspace(self.start, self.stop, self.length)
+    
+class logsweep(sweep):
+    """Class representing a logarithmic sweep from start to stop with a given length."""  
+    def __array__(self) -> np.ndarray:
+        """Convert sweep to numpy array for use with matplotlib and numpy operations."""
+        return np.logspace(np.log10(self.start), np.log10(self.stop), self.length)
+
+# Decorator to support sweeping by setting a particular parameter to a sweep object: zalm.mean_photon = gq.logsweep(1e-4, 1e-2, 100)
 def _sweepable(func: callable) -> callable:
     cls = func.__qualname__.split(".")[0]
     module = cls.lower()

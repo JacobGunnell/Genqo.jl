@@ -10,10 +10,10 @@ using ..tools
 
 
 Base.@kwdef mutable struct SPDC <: GenqoBase
-    mean_photon::Union{AbstractFloat, StepRangeLen} = 1e-2
-    detection_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
-    bsm_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
-    outcoupling_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
+    mean_photon::Sweepable{AbstractFloat} = 1e-2
+    detection_efficiency::Sweepable{AbstractFloat} = 1.0
+    bsm_efficiency::Sweepable{AbstractFloat} = 1.0
+    outcoupling_efficiency::Sweepable{AbstractFloat} = 1.0
 end
 Base.convert(::Type{SPDC}, spdc_py::Py) = SPDC(
     tools._pyconvert_sweepable(Float64, spdc_py.mean_photon),

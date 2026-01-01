@@ -6,6 +6,8 @@ using BlockDiagonals
 using PythonCall
 
 
+Sweepable{T} = Union{T, AbstractRange{<:T}, AbstractVector{<:T}} where T
+
 abstract type GenqoBase end
 
 # Enable broadcasting over Genqo objects with sweep parameters
@@ -32,7 +34,7 @@ function Base.iterate(gq::T, state=1) where T<:GenqoBase
     fields = fieldnames(T)
     field_collections = map(fields) do field
         val = getproperty(gq, field)
-        val isa StepRangeLen ? val : [val]
+        val isa Union{AbstractRange, AbstractVector} ? val : [val]
     end
     
     # Calculate the multi-dimensional index for the Cartesian product
@@ -58,10 +60,17 @@ end
 Convert a Python object to a Julia type, using custom conversion for sweep types.
 """
 function _pyconvert_sweepable(T::Type, py_obj::Py)
-    if pyconvert(String, py_obj.__class__.__name__) == "sweep"
+    name = pyconvert(String, py_obj.__class__.__name__)
+    if name == "linsweep"
         return range(
             pyconvert(T, py_obj.start), 
             stop=pyconvert(T, py_obj.stop), 
+            length=pyconvert(Int, py_obj.length)
+        )
+    elseif name == "logsweep"
+        return logrange(
+            pyconvert(T, py_obj.start), 
+            pyconvert(T, py_obj.stop), 
             length=pyconvert(Int, py_obj.length)
         )
     else
@@ -229,6 +238,6 @@ function k_function_matrix(covariance_matrix::Matrix{Float64})
     return K
 end
 
-export GenqoBase, wick_out, W, extract_W_terms, permutation_matrix, reorder, k_function_matrix
+export Sweepable, GenqoBase, wick_out, W, extract_W_terms, permutation_matrix, reorder, k_function_matrix
 
 end # module

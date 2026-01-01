@@ -9,8 +9,8 @@ using ..tools
 
 # TODO: generalize sweep handling to support explicit arrays of sweep parameters and not just StepRangeLen
 Base.@kwdef mutable struct TMSV <: GenqoBase
-    mean_photon::Union{AbstractFloat, StepRangeLen} = 1e-2
-    detection_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
+    mean_photon::Sweepable{AbstractFloat} = 1e-2
+    detection_efficiency::Sweepable{AbstractFloat} = 1.0
 end
 Base.convert(::Type{TMSV}, tmsv_py::Py) = TMSV(
     tools._pyconvert_sweepable(Float64, tmsv_py.mean_photon), 

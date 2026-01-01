@@ -10,13 +10,13 @@ using ..tools
 
 
 Base.@kwdef mutable struct ZALM <: GenqoBase
-    mean_photon::Union{AbstractFloat, StepRangeLen} = 1e-2
+    mean_photon::Sweepable{AbstractFloat} = 1e-2
     #schmidt_coeffs::Vector{Float64}
-    detection_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
-    bsm_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
-    outcoupling_efficiency::Union{AbstractFloat, StepRangeLen} = 1.0
-    dark_counts::Union{AbstractFloat, StepRangeLen} = 0.0
-    #visibility::Union{AbstractFloat, StepRangeLen} = 1.0
+    detection_efficiency::Sweepable{AbstractFloat} = 1.0
+    bsm_efficiency::Sweepable{AbstractFloat} = 1.0
+    outcoupling_efficiency::Sweepable{AbstractFloat} = 1.0
+    dark_counts::Sweepable{AbstractFloat} = 0.0
+    #visibility::Sweepable{AbstractFloat} = 1.0
 end
 Base.convert(::Type{ZALM}, zalm_py::Py) = ZALM(
     tools._pyconvert_sweepable(Float64, zalm_py.mean_photon),

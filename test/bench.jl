@@ -56,7 +56,8 @@ suite["zalm.fidelity"]               = @benchmarkable zalm.fidelity(z)          
 
 # Other benchmarks
 suite["tools.k_function_matrix"]     = @benchmarkable tools.k_function_matrix(cov)        setup=(cov=zalm.covariance_matrix(rand_zalm()))
-suite["sweep_1d"]                    = @benchmarkable tmsv.probability_success.(1e-4:1e-4:1e-2, 0.7)
+suite["linsweep_1d"]                 = @benchmarkable tmsv.probability_success.(range(1e-4, stop=1e-2, length=100), 0.7)
+suite["logsweep_1d"]                 = @benchmarkable tmsv.probability_success.(logrange(1e-4, 1e-2, length=100), 0.7)
 
 
 # Filter suite based on func_filter if provided
