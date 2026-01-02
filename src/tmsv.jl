@@ -14,8 +14,8 @@ Base.@kwdef mutable struct TMSV <: GenqoBase
     detection_efficiency::Sweepable{AbstractFloat} = 1.0
 end
 Base.convert(::Type{TMSV}, tmsv_py::Py) = TMSV(
-    tools._pyconvert_sweepable(Float64, tmsv_py.mean_photon), 
-    tools._pyconvert_sweepable(Float64, tmsv_py.detection_efficiency),
+    _pyconvert_sweepable(Float64, tmsv_py.mean_photon), 
+    _pyconvert_sweepable(Float64, tmsv_py.detection_efficiency),
 )
 
 # Global canonical position and momentum variables

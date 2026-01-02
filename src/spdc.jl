@@ -17,11 +17,11 @@ Base.@kwdef mutable struct SPDC <: GenqoBase
     outcoupling_efficiency::Sweepable{AbstractFloat} = 1.0
 end
 Base.convert(::Type{SPDC}, spdc_py::Py) = SPDC(
-    tools._pyconvert_sweepable(Float64, spdc_py.mean_photon),
+    _pyconvert_sweepable(Float64, spdc_py.mean_photon),
     #pyconvert(Vector{Float64}, spdc_py.schmidt_coeffs),
-    tools._pyconvert_sweepable(Float64, spdc_py.detection_efficiency),
-    tools._pyconvert_sweepable(Float64, spdc_py.bsm_efficiency),
-    tools._pyconvert_sweepable(Float64, spdc_py.outcoupling_efficiency),
+    _pyconvert_sweepable(Float64, spdc_py.detection_efficiency),
+    _pyconvert_sweepable(Float64, spdc_py.bsm_efficiency),
+    _pyconvert_sweepable(Float64, spdc_py.outcoupling_efficiency),
     #pyconvert(Float64, spdc_py.dark_counts),
     #pyconvert(Float64, spdc_py.visibility),
 )

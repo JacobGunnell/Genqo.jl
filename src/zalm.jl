@@ -20,13 +20,13 @@ Base.@kwdef mutable struct ZALM <: GenqoBase
     #visibility::Sweepable{AbstractFloat} = 1.0
 end
 Base.convert(::Type{ZALM}, zalm_py::Py) = ZALM(
-    tools._pyconvert_sweepable(Float64, zalm_py.mean_photon),
+    _pyconvert_sweepable(Float64, zalm_py.mean_photon),
     #pyconvert(Vector{Float64}, zalm_py.schmidt_coeffs),
-    tools._pyconvert_sweepable(Float64, zalm_py.detection_efficiency),
-    tools._pyconvert_sweepable(Float64, zalm_py.bsm_efficiency),
-    tools._pyconvert_sweepable(Float64, zalm_py.outcoupling_efficiency),
-    tools._pyconvert_sweepable(Float64, zalm_py.dark_counts),
-    #tools._pyconvert_sweepable(Float64, zalm_py.visibility),
+    _pyconvert_sweepable(Float64, zalm_py.detection_efficiency),
+    _pyconvert_sweepable(Float64, zalm_py.bsm_efficiency),
+    _pyconvert_sweepable(Float64, zalm_py.outcoupling_efficiency),
+    _pyconvert_sweepable(Float64, zalm_py.dark_counts),
+    #_pyconvert_sweepable(Float64, zalm_py.visibility),
 )
 
 # Global canonical position and momentum variables
