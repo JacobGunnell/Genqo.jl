@@ -73,6 +73,8 @@ function _pyconvert_sweepable(T::Type, py_obj::Py)
             pyconvert(T, py_obj.stop), 
             length=pyconvert(Int, py_obj.length)
         )
+    elseif name == "ptsweep"
+        return pyconvert(Vector{T}, py_obj.points)
     else
         return pyconvert(T, py_obj)
     end
