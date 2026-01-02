@@ -4,6 +4,7 @@ using Nemo
 using LinearAlgebra
 using PythonCall
 
+using ..Genqo: GenqoBase, Sweepable, _pyconvert_sweepable
 using ..tools
 
 
