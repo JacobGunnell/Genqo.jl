@@ -88,6 +88,17 @@ def test_spdc__probability_success(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, spdc_
 
         assert np.isclose(prob_success_py, prob_success_jl, atol=tol), error_with_params(params)
 
+def test_spdc__fidelity(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, spdc_test_cases: list[dict]) -> None:
+    for params in spdc_test_cases:
+        spdc_py.params.update(params)
+        spdc_py.run()
+        spdc_py.calculate_fidelity()
+        fidelity_py = spdc_py.results["fidelity"]
+
+        spdc_jl.set(**params)
+        fidelity_jl = spdc_jl.fidelity()
+
+        assert np.isclose(fidelity_py, fidelity_jl, atol=tol), error_with_params(params)
 
 # ZALM tests
 

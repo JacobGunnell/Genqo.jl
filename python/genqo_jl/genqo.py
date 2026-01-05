@@ -107,9 +107,9 @@ class SPDC(GenqoBase):
     
     @_sweepable
     def fidelity(self) -> float:
-        # return jl.spdc.fidelity(
-        #     jl.convert(jl.spdc.SPDC, self)
-        # )
+        return jl.spdc.fidelity(
+            jl.convert(jl.spdc.SPDC, self)
+        )
         raise NotImplementedError
     
 
