@@ -37,8 +37,14 @@ class ptsweep(sweep):
     def __add__(self, other: float):
         return ptsweep(self.points + other)
     
+    def __radd__(self, other: float):
+        return ptsweep(other + self.points)
+    
     def __sub__(self, other: float):
         return ptsweep(self.points - other)
+    
+    def __rsub__(self, other: float):
+        return ptsweep(other - self.points)
     
     def __mul__(self, other: float):
         return ptsweep(self.points * other)
@@ -84,8 +90,14 @@ class linsweep(sweep):
     def __add__(self, other: float):
         return linsweep(self.start + other, self.stop + other, self.length)
     
+    def __radd__(self, other: float):
+        return linsweep(other + self.start, other + self.stop, self.length)
+    
     def __sub__(self, other: float):
         return linsweep(self.start - other, self.stop - other, self.length)
+    
+    def __rsub__(self, other: float):
+        return linsweep(other - self.start, other - self.stop, self.length)
     
     def __mul__(self, other: float):
         return linsweep(self.start * other, self.stop * other, self.length)
@@ -130,8 +142,14 @@ class logsweep(sweep):
     def __add__(self, other: float):
         return ptsweep(np.array(self) + other)
     
+    def __radd__(self, other: float):
+        return ptsweep(other + np.array(self))
+    
     def __sub__(self, other: float):
         return ptsweep(np.array(self) - other)
+    
+    def __rsub__(self, other: float):
+        return ptsweep(other - np.array(self))
     
     def __mul__(self, other: float):
         return logsweep(self.start * other, self.stop * other, self.length)
