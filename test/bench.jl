@@ -32,7 +32,7 @@ nvec = [0,1,0,1]
 suite["spdc.covariance_matrix"]      = @benchmarkable spdc.covariance_matrix(s)           setup=(s=rand_spdc())
 suite["spdc.loss_bsm_matrix_fid"]    = @benchmarkable spdc.loss_bsm_matrix_fid(s)         setup=(s=rand_spdc())
 suite["spdc.spin_density_matrix"]    = @benchmarkable spdc.spin_density_matrix(s, $nvec)  setup=(s=rand_spdc())
-
+suite["spdc.fidelity"]               = @benchmarkable spdc.fidelity(s)                    setup=(s=rand_spdc())
 
 # ZALM benchmarks
 rand_zalm() = zalm.ZALM(

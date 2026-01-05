@@ -76,6 +76,17 @@ def test_spdc__spin_density_matrix(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, spdc_
         spin_density_matrix_jl = spdc_jl.spin_density_matrix(nvec)
         assert np.allclose(spin_density_matrix_py, spin_density_matrix_jl, atol=tol), error_with_params(params)
 
+def test_spdc__fidelity(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, spdc_test_cases: list[dict]) -> None:
+    for params in spdc_test_cases:
+        spdc_py.params.update(params)
+        spdc_py.run()
+        spdc_py.calculate_fidelity()
+        fidelity_py = spdc_py.results["fidelity"]
+
+        spdc_jl.set(**params)
+        fidelity_jl = spdc_jl.fidelity()
+
+        assert np.isclose(fidelity_py, fidelity_jl, atol=tol), error_with_params(params)
 
 # ZALM tests
 
