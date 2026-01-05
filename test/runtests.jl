@@ -7,7 +7,6 @@ end
 
 @testset "SPDC" begin
     @test !any(isnan, spdc.spin_density_matrix(1e-4, 0.9, 0.6, [0,1,0,1]))
-    @test !isnan(spdc.probability_success(1e-2, 0.9))
     @test !isnan(spdc.fidelity(1e-2, 0.8, 0.6))
 end
 
