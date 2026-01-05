@@ -104,7 +104,6 @@ class SPDC(GenqoBase):
         return jl.spdc.fidelity(
             jl.convert(jl.spdc.SPDC, self)
         )
-        raise NotImplementedError
     
 
 @define
