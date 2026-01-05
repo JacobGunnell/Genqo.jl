@@ -1,54 +1,52 @@
 using PythonCall
 
 
-Sweepable{T} = Union{T, AbstractRange{<:T}, AbstractVector{<:T}} where T
+Sweepable{T} = Union{T, AbstractVector{<:T}} where T
 
 abstract type GenqoBase end
 
 # Enable broadcasting over Genqo objects with sweep parameters
 # TODO: give explicit sweep type like in Python wrapper so that Genqo objects can have mixed sweep/non-sweep (1+)-dimensional fields (e.g. schmidt coefficients)
-# For now, we assume all fields are either single values or StepRangeLen sweeps of single values
-function Base.length(gq::T) where T<:GenqoBase
-    len = 1
-    for field in fieldnames(T)
-        len *= length(getproperty(gq, field))
-    end
-    return len
+# For now, we assume all fields are either single values or sweeps of single values
+Base.size(gq::GenqoBase) = Tuple(length(getfield(gq, f)) for f in fieldnames(typeof(gq)))
+Base.length(gq::GenqoBase) = prod(size(gq))
+
+struct SweepStyle <: Base.Broadcast.BroadcastStyle end
+Base.Broadcast.BroadcastStyle(::Type{<:GenqoBase}) = SweepStyle()
+Base.Broadcast.broadcastable(x::GenqoBase) = x
+
+# N-dimensional broadcast shape
+function Base.axes(gq::T) where T<:GenqoBase 
+    Tuple(Base.OneTo(length(getfield(gq, f))) for f in fieldnames(T) if length(getfield(gq, f)) > 1)
 end
 
-# TODO: allow iteration to preserve the shape of cartesian product over fields, as in tmsv.probability_success.(tmsv.TMSV(0.01:0.01:10, 0.7:0.1:0.9))
-# Currently, we flatten to 1D iteration, so above returns a 3000-element Vector instead of a 1000x3 Matrix
-function Base.iterate(gq::T, state=1) where T<:GenqoBase
-    total_len = length(gq)
-    
-    if state > total_len
-        return nothing
+# Element access during broadcast
+@inline function Base.getindex(gq::T, I::CartesianIndex) where T<:GenqoBase
+    swept_idx = 1
+    params = map(fieldnames(T)) do f
+        field_val = getfield(gq, f)
+        if length(field_val) > 1
+            idx = I[swept_idx]
+            swept_idx += 1
+            field_val[idx]
+        else
+            field_val[1]
+        end
     end
-    
-    # Get field names and convert each field to a collection
-    fields = fieldnames(T)
-    field_collections = map(fields) do field
-        val = getproperty(gq, field)
-        val isa Union{AbstractRange, AbstractVector} ? val : [val]
-    end
-    
-    # Calculate the multi-dimensional index for the Cartesian product
-    field_lengths = map(length, field_collections)
-    indices = zeros(Int, length(fields))
-    
-    # Convert linear state to multi-dimensional indices
-    remainder = state - 1
-    for i in length(fields):-1:1
-        indices[i] = remainder % field_lengths[i] + 1
-        remainder ÷= field_lengths[i]
-    end
-    
-    # Extract values at the calculated indices
-    field_values = map(enumerate(field_collections)) do (i, collection)
-        collection[indices[i]]
-    end
-    
-    return T(field_values...), state + 1
+    return T(params...)
+end
+
+@inline function Base.getindex(gq::T, i::Int) where T<:GenqoBase
+    # Map linear index to CartesianIndex based on swept dimensions only
+    swept_axes = axes(gq)
+    cart_idx = CartesianIndices(swept_axes)[i]
+    return gq[cart_idx]
+end
+
+function Base.similar(bc::Broadcast.Broadcasted{SweepStyle}, ::Type{ElType}) where ElType
+    ax = axes(bc)
+    # Return a vector for single-parameter sweeps, array for multi-parameter
+    length(ax) == 1 ? similar(Vector{ElType}, ax[1]) : similar(Array{ElType}, ax)
 end
 
 """
