@@ -65,6 +65,19 @@ def test_linsweep_1d(tmsv_py: gqpy.TMSV, benchmark):
         return probability_success
     benchmark(linsweep_1d)
 
+def test_linsweep_2d(tmsv_py: gqpy.TMSV, benchmark):
+    def linsweep_2d():
+        probability_success = np.zeros((100, 5))
+        for i, eff in enumerate([0.2, 0.5, 0.6, 0.7, 0.9]):
+            tmsv_py.params["detection_efficiency"] = eff
+            for mp in np.linspace(1e-4, 1e-2, 100):
+                tmsv_py.params["mean_photon"] = mp
+                tmsv_py.run()
+                tmsv_py.calculate_probability_success()
+                probability_success[:, i] = tmsv_py.results["probability_success"]
+        return probability_success
+    benchmark(linsweep_2d)
+
 def test_logsweep_1d(tmsv_py: gqpy.TMSV, benchmark):
     def logsweep_1d():
         probability_success = []
