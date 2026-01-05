@@ -100,12 +100,6 @@ class SPDC(GenqoBase):
         )
     
     @_sweepable
-    def probability_success(self) -> float:
-        return jl.spdc.probability_success(
-            jl.convert(jl.spdc.SPDC, self)
-        )
-    
-    @_sweepable
     def fidelity(self) -> float:
         # return jl.spdc.fidelity(
         #     jl.convert(jl.spdc.SPDC, self)

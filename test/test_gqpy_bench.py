@@ -18,9 +18,6 @@ def test_tmsv__loss_matrix_pgen(tmsv_py: gqpy.TMSV, benchmark):
 
 # SPDC benchmarks
 
-def test_spdc__probability_success(spdc_py: gqpy.SPDC, benchmark):
-    benchmark(lambda: spdc_py.run() and spdc_py.calculate_probability_success())
-
 def test_spdc__fidelity(spdc_py: gqpy.SPDC, benchmark):
     benchmark(lambda: spdc_py.run() and spdc_py.calculate_fidelity())
 

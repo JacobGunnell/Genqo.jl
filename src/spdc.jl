@@ -213,33 +213,4 @@ function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, nvec::
 end
 spin_density_matrix(spdc::SPDC, nvec::Vector{Int}) = spin_density_matrix(spdc.mean_photon, spdc.outcoupling_efficiency, spdc.detection_efficiency, nvec)
 
-"""
-    probability_success(μ::Float64, ηᵇ::Float64)
-
-Calculate the probability of photon-photon state generation with the given parameters.
-
-# Parameters
-- μ : The mean photon number
-- ηᵇ : Bell state measurement efficiency
-
-# Returns
-Probability of successful photon-photon state generation
-"""
-function probability_success(μ::Float64, ηᵇ::Float64)
-    cov = covariance_matrix(μ)
-    A = k_function_matrix(cov) + loss_bsm_matrix_trace
-    #Ainv = inv(A)
-    Γ = cov + (1/2)*I
-    detΓ = det(Γ)
-
-    N1 = ηᵇ^2
-    D1 = sqrt(det(A))
-    D2 = detΓ^(1/4)
-    D3 = conj(detΓ)^(1/4)
-    Coef = N1/(D1*D2*D3)
-
-    return real(Coef)
-end
-probability_success(spdc::SPDC) = probability_success(spdc.mean_photon, spdc.bsm_efficiency)
-
 end # module
