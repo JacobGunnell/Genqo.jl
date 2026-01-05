@@ -51,8 +51,9 @@ Calculate the covariance matrix of the SPDC source
 function covariance_matrix(μ::Float64)
     tmsv_covar = tmsv.covariance_matrix(μ)
     covar = Matrix(BlockDiagonal([tmsv_covar, tmsv_covar]))
+    covar_qpqp = _perm_matrix_12785634 * covar * _perm_matrix_12785634'
 
-    return _perm_matrix_12785634 * covar * _perm_matrix_12785634'
+    return reorder(covar_qpqp) # convert to qqpp ordering, consistent with ZALM
 end
 covariance_matrix(spdc::SPDC) = covariance_matrix(spdc.mean_photon)
 
@@ -241,5 +242,69 @@ function probability_success(μ::Float64, ηᵇ::Float64)
     return real(Coef)
 end
 probability_success(spdc::SPDC) = probability_success(spdc.mean_photon, spdc.bsm_efficiency)
+
+# --- Moment polynomials for SPDC ---
+const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begin
+    Ca1 = α[1] * α[4]
+    Ca2 = α[2] * α[3]
+    Cb1 = β[1] * β[4]
+    Cb2 = β[2] * β[3]
+
+    Dict(
+        0 => α[3] * α[4] * β[3] * β[4], 
+        1 => Ca1 * Cb1,
+        2 => Ca1 * Cb2,
+        3 => Ca2 * Cb1,
+        4 => Ca2 * Cb2,
+    )
+end
+
+# Precompile monomials -> (coef, idxs) for fast Wick evaluation
+const moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}} = Dict(
+    k => extract_W_terms(v) for (k, v) in moment_vector
+)
+
+function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64)
+    cov = covariance_matrix(μ)
+
+    # Γ (is gamma in python)
+    Γ = cov + (1/2) * I
+    detΓ = det(Γ)
+    K = k_function_matrix(cov)
+
+    # --- A1 ---
+    A1 = K + loss_bsm_matrix_fid(ηᵗ, ηᵈ)
+
+    # Factor + invers
+    factA1 = lu(A1)
+    Ainv1  = inv(factA1)
+    D1     = sqrt(det(factA1))  # sqrt(det(A1))
+
+    # Wick terms (cached)
+    Fsum =
+        W(moment_terms[1], Ainv1) +
+        W(moment_terms[2], Ainv1) +
+        W(moment_terms[3], Ainv1) +
+        W(moment_terms[4], Ainv1)
+
+    # Python: N1 = ((ηd^2)*(ηt^2))^2 = (ηt*ηd)^4
+    N1 = (ηᵗ * ηᵈ)^4
+
+    # Python: D2 = det(Γ)^(1/4), D3 = det(conj(Γ))^(1/4)
+    D2 = detΓ^(1/4)
+    D3 = conj(detΓ)^(1/4)
+
+    coef = N1 / (2 * D1 * D2 * D3)
+
+    value = coef * Fsum
+    if abs(imag(value)) > 1e-10
+        @warn "SPDC fidelity has nontrivial imaginary part" imag=imag(value) value=value
+    end
+    return real(value)
+end
+
+fidelity(spdc::SPDC) = fidelity(spdc.mean_photon, spdc.outcoupling_efficiency, spdc.detection_efficiency)
+
+
 
 end # module
