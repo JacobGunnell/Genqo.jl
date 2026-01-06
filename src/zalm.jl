@@ -71,7 +71,7 @@ end
 """
 Calculate the covariance matrix of the single-mode ZALM source
 """
-function covariance_matrix(μ::Float64)
+function covariance_matrix(μ::Real)
     # Initial ZALM covariance matrix in qpqp ordering
     spdc_covar = spdc.covariance_matrix(μ)
     covar_qpqp = Matrix(BlockDiagonal([spdc_covar, spdc_covar]))
@@ -85,7 +85,7 @@ covariance_matrix(zalm::ZALM) = covariance_matrix(zalm.mean_photon)
 """
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
 """
-function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+function loss_bsm_matrix_fid(ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
     G = zeros(ComplexF64, 32, 32)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
@@ -110,7 +110,7 @@ Should we instead be "Tracing out" these modes (effectively setting η=1)?
 Projecting to vacuum implies we only count success if the BSM clicks AND zero signal photons 
 are generated, which results in a very small probability and potentially inflates the Fidelity calculation.
 """
-function loss_bsm_matrix_pgen(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+function loss_bsm_matrix_pgen(ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
     G = zeros(ComplexF64, 32, 32)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
@@ -133,7 +133,7 @@ end
 loss_bsm_matrix_pgen(zalm::ZALM) = loss_bsm_matrix_pgen(zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 
 """
-    dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+    dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
 
 Calculate a single element of the unnormalized density matrix.
 
@@ -149,7 +149,7 @@ Calculate a single element of the unnormalized density matrix.
 # Returns
 Density matrix element for the ZALM source
 """
-function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
     # Calculate Ca based on dmi value
@@ -222,7 +222,7 @@ function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, 
 end
 
 """
-    spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
+    spin_density_matrix(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real, nvec::Vector{Int})
 
 Calculate the density operator of the single-mode ZALM source on the spin-spin state.
 
@@ -236,7 +236,7 @@ Calculate the density operator of the single-mode ZALM source on the spin-spin s
 # Returns
 Numerical complete spin density matrix
 """
-function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
+function spin_density_matrix(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
     cov = covariance_matrix(μ)
@@ -296,7 +296,7 @@ const moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}} = Dict(
 )
 
 """
-    probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
+    probability_success(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real, dark_counts::Real)
 
 Calculate the probability of photon-photon state generation with the given parameters.
 
@@ -310,7 +310,7 @@ Calculate the probability of photon-photon state generation with the given param
 # Returns
 Probability of successful photon-photon state generation
 """
-function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, dark_counts::Float64)
+function probability_success(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real, dark_counts::Real)
     cov = covariance_matrix(μ)
     A = k_function_matrix(cov) + loss_bsm_matrix_pgen(ηᵗ, ηᵈ, ηᵇ)
     Ainv = inv(A)
@@ -337,7 +337,7 @@ function probability_success(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ:
 end
 probability_success(zalm::ZALM) = probability_success(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, zalm.dark_counts)
 
-function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
  # Calculate the fidelity with respect to the Bell state for the photon-photon single-mode ZALM source
 
     cov = covariance_matrix(μ)

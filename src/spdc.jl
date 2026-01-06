@@ -48,7 +48,7 @@ _perm_matrix_12785634 = permutation_matrix([1,2,7,8,5,6,3,4])
 """
 Calculate the covariance matrix of the SPDC source
 """
-function covariance_matrix(μ::Float64)
+function covariance_matrix(μ::Real)
     tmsv_covar = tmsv.covariance_matrix(μ)
     covar = Matrix(BlockDiagonal([tmsv_covar, tmsv_covar]))
     covar_qpqp = _perm_matrix_12785634 * covar * _perm_matrix_12785634'
@@ -57,12 +57,12 @@ end
 covariance_matrix(spdc::SPDC) = covariance_matrix(spdc.mean_photon)
 
 # Physical covariance in qqpp ordering (matches Python SPDC.calculate_covariance_matrix())
-covariance_matrix_qqpp(μ::Float64) = reorder(covariance_matrix(μ))
+covariance_matrix_qqpp(μ::Real) = reorder(covariance_matrix(μ))
 covariance_matrix_qqpp(spdc::SPDC) = covariance_matrix_qqpp(spdc.mean_photon)
 """
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
 """
-function loss_bsm_matrix_fid(ηᵗ::Float64, ηᵈ::Float64)
+function loss_bsm_matrix_fid(ηᵗ::Real, ηᵈ::Real)
     G = zeros(ComplexF64, 16, 16)
     η = ηᵗ*ηᵈ
 
@@ -94,7 +94,7 @@ loss_bsm_matrix_trace::Matrix{ComplexF64} = begin
 end
 
 """
-    dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
+    dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
 
 Calculate a single element of the unnormalized density matrix.
 
@@ -110,7 +110,7 @@ Calculate a single element of the unnormalized density matrix.
 # Returns
 Density matrix element for the ZALM source
 """
-function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Float64, ηᵈ::Float64)
+function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, ηᵗ::Real, ηᵈ::Real)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
     # Calculate Ca based on dmi value
@@ -178,7 +178,7 @@ function dmijZ(dmi::Int, dmj::Int, Ainv::Matrix{ComplexF64}, nvec::Vector{Int}, 
 end
 
 """
-    spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64, nvec::Vector{Int})
+    spin_density_matrix(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real, nvec::Vector{Int})
 
 Calculate the density operator of the single-mode ZALM source on the spin-spin state.
 
@@ -192,7 +192,7 @@ Calculate the density operator of the single-mode ZALM source on the spin-spin s
 # Returns
 Numerical complete spin density matrix
 """
-function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, nvec::Vector{Int})
+function spin_density_matrix(μ::Real, ηᵗ::Real, ηᵈ::Real, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
     cov = covariance_matrix_qqpp(μ)
@@ -237,7 +237,20 @@ const moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}} = Dict(
     k => extract_W_terms(v) for (k, v) in moment_vector
 )
 
-function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64)
+"""
+    fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real)
+
+Calculate the fidelity of the SPDC source with the given parameters.
+
+# Parameters
+- μ : Mean photon number
+- ηᵗ : Outcoupling efficiency
+- ηᵈ : Detection efficiency
+
+# Returns
+Fidelity of the SPDC source
+"""
+function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real)
     cov = covariance_matrix_qqpp(μ)
 
     # Γ (is gamma in python)

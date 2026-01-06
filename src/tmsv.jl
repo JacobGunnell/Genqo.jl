@@ -36,7 +36,7 @@ R, generators = polynomial_ring(CC, all_qps)
 β = (qbi - i .* pbi) / sqrt(2)
 
 """
-    covariance_matrix(μ::Float64)
+    covariance_matrix(μ::Real)
 
 Construct the covariance matrix for a TMSV state.
 
@@ -46,7 +46,7 @@ Construct the covariance matrix for a TMSV state.
 # Returns
 The covariance matrix for the TMSV state, in the qpqp ordering
 """
-covariance_matrix(μ::Float64) = [
+covariance_matrix(μ::Real) = [
     0.5 + μ        0               sqrt(μ*(μ+1))  0;
     0              0.5 + μ         0              -sqrt(μ*(μ+1));
     sqrt(μ*(μ+1))  0               0.5 + μ        0;
@@ -57,7 +57,7 @@ covariance_matrix(tmsv::TMSV) = covariance_matrix(tmsv.mean_photon)
 """
 Calculates the portion of the A matrix that arrises due to incorporating loss
 """
-function loss_matrix_pgen(ηᵈ::Float64)
+function loss_matrix_pgen(ηᵈ::Real)
     G = zeros(ComplexF64, 8, 8)
 
     for i in 1:2
@@ -76,7 +76,7 @@ function moment_vector(n::Int)
 end
 
 """
-    probability_success(μ::Float64, ηᵈ::Float64)
+    probability_success(μ::Real, ηᵈ::Real)
 
 Calculate the probability of photon-photon state generation with the given parameters.
 
@@ -87,8 +87,8 @@ Calculate the probability of photon-photon state generation with the given param
 # Returns
 Probability of successful photon-photon state generation
 """
-function probability_success(μ::Float64, ηᵈ::Float64)
-    # Compute covariance matrix and eorder qpqp → qqpp
+function probability_success(μ::Real, ηᵈ::Real)
+    # Compute covariance matrix and reorder qpqp → qqpp
     cov = reorder(covariance_matrix(μ))
 
     A = k_function_matrix(cov) + loss_matrix_pgen(ηᵈ)
