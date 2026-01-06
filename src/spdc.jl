@@ -52,11 +52,13 @@ function covariance_matrix(μ::Float64)
     tmsv_covar = tmsv.covariance_matrix(μ)
     covar = Matrix(BlockDiagonal([tmsv_covar, tmsv_covar]))
     covar_qpqp = _perm_matrix_12785634 * covar * _perm_matrix_12785634'
-
-    return reorder(covar_qpqp) # convert to qqpp ordering, consistent with ZALM
+    return covar_qpqp
 end
 covariance_matrix(spdc::SPDC) = covariance_matrix(spdc.mean_photon)
 
+# Physical covariance in qqpp ordering (matches Python SPDC.calculate_covariance_matrix())
+covariance_matrix_qqpp(μ::Float64) = reorder(covariance_matrix(μ))
+covariance_matrix_qqpp(spdc::SPDC) = covariance_matrix_qqpp(spdc.mean_photon)
 """
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
 """
@@ -193,7 +195,7 @@ Numerical complete spin density matrix
 function spin_density_matrix(μ::Float64, ηᵗ::Float64, ηᵈ::Float64, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
-    cov = covariance_matrix(μ)
+    cov = covariance_matrix_qqpp(μ)
     A = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ)
     Ainv = inv(A)
     Γ = cov + (1/2)*I
@@ -236,7 +238,7 @@ const moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}} = Dict(
 )
 
 function fidelity(μ::Float64, ηᵗ::Float64, ηᵈ::Float64)
-    cov = covariance_matrix(μ)
+    cov = covariance_matrix_qqpp(μ)
 
     # Γ (is gamma in python)
     Γ = cov + (1/2) * I
