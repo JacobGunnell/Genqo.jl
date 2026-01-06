@@ -102,6 +102,13 @@ loss_bsm_matrix_fid(zalm::ZALM) = loss_bsm_matrix_fid(zalm.outcoupling_efficienc
 
 """
 Calculate the loss portion of the A matrix, specifically when calculating probability of success
+
+TODO/QUESTION:
+Currently, this function projects the signal modes (1, 2, 7, 8) onto the Vacuum state 
+(effectively setting η=0 for those modes). 
+Should we instead be "Tracing out" these modes (effectively setting η=1)? 
+Projecting to vacuum implies we only count success if the BSM clicks AND zero signal photons 
+are generated, which results in a very small probability and potentially inflates the Fidelity calculation.
 """
 function loss_bsm_matrix_pgen(ηᵗ::Float64, ηᵈ::Float64, ηᵇ::Float64)
     G = zeros(ComplexF64, 32, 32)
