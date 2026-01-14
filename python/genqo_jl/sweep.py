@@ -179,32 +179,19 @@ def _sweepable(func: callable) -> callable:
     @wraps(func)
     def wrapper(self, *args, _func_name: str = func.__name__):
         # If no sweeping is required, call the function once directly
-        if not any(isinstance(getattr(self, param.name), sweep) for param in fields(self.__class__)):
-            return func(self, *args)
+        if not any(isinstance(getattr(self, param.name), sweep) for param in fields(type(self))):
+            return func(
+                jl.convert(jl_cls_type, self), 
+                *args
+            )
 
         # If sweeping is required, perform fast broadcast sweep in Julia
         else:
-            # TODO: support function args other than self
+            # Pass any array-valued arguments as reference to prevent broadcast (we don't broadcast over individual elements of nvec=[1,0,1,1,0,0,1,0], for example)
             converted_args = []
             for arg in args:
-                if isinstance(arg, np.ndarray):
-                    if arg.dtype == np.float64:
-                        converted_args.append(jl.convert(jl.Array[jl.Float64], arg))
-                    elif arg.dtype == np.float32:
-                        converted_args.append(jl.convert(jl.Array[jl.Float32], arg))
-                    elif arg.dtype == np.int64:
-                        converted_args.append(jl.convert(jl.Array[jl.Int64], arg))
-                    elif arg.dtype == np.int32:
-                        converted_args.append(jl.convert(jl.Array[jl.Int32], arg))
-                    else:
-                        converted_args.append(arg)
-                elif isinstance(arg, list):
-                    if all(isinstance(x, int) for x in arg):
-                        converted_args.append(jl.convert(jl.Array[jl.Int], arg))
-                    elif all(isinstance(x, float) for x in arg):
-                        converted_args.append(jl.convert(jl.Array[jl.Float], arg))
-                    else:
-                        converted_args.append(arg)
+                if jl.isa(arg, jl.Array):
+                    converted_args.append(jl.Ref(arg))
                 else:
                     converted_args.append(arg)
 

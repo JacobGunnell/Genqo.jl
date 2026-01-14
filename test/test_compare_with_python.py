@@ -65,7 +65,7 @@ def test_spdc__loss_bsm_matrix_fid(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, spdc_
         assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
 
 def test_spdc__spin_density_matrix(spdc_py: gqpy.SPDC, spdc_jl: gqjl.SPDC, spdc_test_cases: list[dict]) -> None:
-    nvec = [1, 0, 1, 1, 0, 0, 1, 0]
+    nvec = np.array([0,1,0,1])
     for params in spdc_test_cases:
         spdc_py.params.update(params)
         spdc_py.run()
@@ -124,7 +124,7 @@ def test_zalm__loss_bsm_matrix_pgen(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm
         assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
 
 def test_zalm__spin_density_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm_test_cases: list[dict]) -> None:
-    nvec = [1,0,1,1,0,0,1,0]
+    nvec = np.array([1,0,1,1,0,0,1,0])
     for params in zalm_test_cases:
         zalm_py.params.update(params)
         zalm_py.run()
