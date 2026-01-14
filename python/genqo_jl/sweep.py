@@ -29,9 +29,9 @@ class ptsweep(sweep):
         """Return the number of points in the sweep."""
         return len(self.points)
     
-    def __array__(self) -> np.ndarray:
+    def __array__(self, **kwargs) -> np.ndarray:
         """Convert sweep to numpy array for use with matplotlib and numpy operations."""
-        return np.asarray(self.points)
+        return np.asarray(self.points, **kwargs)
     
     # Arithmetic operations
     def __add__(self, other: float):
