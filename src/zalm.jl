@@ -260,6 +260,18 @@ function spin_density_matrix(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real, nv
 end
 spin_density_matrix(zalm::ZALM, nvec::Vector{Int}) = spin_density_matrix(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, nvec)
 
+"""
+    moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}}
+
+Symbolic moment polynomials used by ZALM.
+
+- Maps an integer key to a Nemo polynomial in the global phase-space variables (`q/p` → α, β).
+- Each polynomial represents a specific Gaussian moment needed in ZALM calculations
+  (e.g., Bell-overlap terms, trace/normalization terms, and click/dark-count moments).
+- These are evaluated numerically by contracting against `Ainv` via Wick’s theorem:
+  - either directly with `tools.W(moment_vector[k], Ainv)`, or
+  - more efficiently via `moment_terms[k] = tools.extract_W_terms(moment_vector[k])`.
+"""
 const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begin
     Ca₁ = α[1]*α[3]*α[4]*α[8]
     Ca₂ = α[2]*α[3]*α[4]*α[7]
@@ -289,8 +301,19 @@ const moment_vector::Dict{Int, Nemo.Generic.MPoly{Nemo.ComplexFieldElem}} = begi
         14 => one(R)
     )
 end
-# Precompiled terms for fast Wick evaluation for specific polynomials (avoids Nemo monomial parsing per call)
-# current precompiled polynomials: all in moment_vector
+
+"""
+    moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}}
+
+Precompiled Wick terms for ZALM moment polynomials.
+
+- Keys match `moment_vector` (each key corresponds to a specific moment polynomial used in ZALM formulas).
+- Values are monomials encoded as `(coef, idxs)`:
+  - `coef::ComplexF64` = monomial coefficient
+  - `idxs::Vector{Int}` = variable indices appearing with exponent 1
+- Used by `tools.W(moment_terms[k], Ainv)` for fast Gaussian moment evaluation via Wick pairings.
+- Exists to avoid repeated Nemo polynomial parsing during fidelity and probability_success.
+"""
 const moment_terms::Dict{Int, Vector{Tuple{ComplexF64, Vector{Int}}}} = Dict(
     k => extract_W_terms(v) for (k, v) in moment_vector
 )
@@ -337,6 +360,25 @@ function probability_success(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real, da
 end
 probability_success(zalm::ZALM) = probability_success(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency, zalm.dark_counts)
 
+"""
+    fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
+
+Calculate the Bell-state fidelity of the single-mode ZALM source under loss.
+
+This computes the overlap ⟨Φ|ρ|Φ⟩ of the post-selected spin-spin state produced by the ZALM source with an
+ideal Bell state. The evaluation is performed via Gaussian moment (Wick) contractions using the ZALM
+covariance matrix, with efficiencies applied through transmission/outcoupling (ηᵗ), detection (ηᵈ), and
+Bell-state-measurement (ηᵇ) models.
+
+# Parameters
+- μ  : Mean photon number
+- ηᵗ : Outcoupling / transmission efficiency
+- ηᵈ : Detection efficiency
+- ηᵇ : Bell-state measurement efficiency
+
+# Returns
+Real-valued Bell-state fidelity of the ZALM source for the given parameters.
+"""
 function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
  # Calculate the fidelity with respect to the Bell state for the photon-photon single-mode ZALM source
 
