@@ -1,0 +1,2 @@
+Old genqo Python implementation; included here for comparative benchmarking purposes.
+Since this is a public repository, I'm not publishing the development version of genqo here, used by Gabe and Dr. Guha's lab. If you want to run comparative benchmarks for SIGSAG source (dev version only), copy `zalm-tools/sources/hybrid_gauss_model.py` from the `Guha-Group/ZALM-Modelling` repo to `./genqo_old_dev.py` for full functionality. Otherwise, ZALM, SPDC, and TMSV are supported by default with `./genqo_old_pip.py`, pulled straight from pip for genqo v0.1.1.

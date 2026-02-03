@@ -3,16 +3,15 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "genqo_jl"
-version = "0.1.0"
-description = "Genqo.jl: A Hybrid Gaussian/Non-Gaussian Quantum Optics State Engine"
+name = "genqo"
+version = "1.0.0"
+description = "Genqo.jl: A Hybrid Gaussian/Non-Gaussian Quantum Optics State Engine for Entanglement Source Modelling"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "Gabe Richardson", email = "rgb@umd.edu"},
     {name = "Jacob Gunnell", email = "jacob.r.gunnell@gmail.com"},
-    {name = "BYU CamachoLab", email = "camacho@byu.edu"},
 ]
 keywords = ["quantum", "optics", "gaussian", "quantum-information"]
 classifiers = [
@@ -37,7 +36,6 @@ dependencies = [
 test = [
     "pytest>=9.0.0",
     "pytest-benchmark>=5.2.0",
-    "genqo==0.1.1",
 ]
 
 [project.urls]
@@ -47,4 +45,4 @@ Repository = "https://github.com/JacobGunnell/genqo.jl"
 Issues = "https://github.com/JacobGunnell/genqo.jl/issues"
 
 [tool.setuptools]
-packages = ["genqo_jl"]
+packages = ["genqo"]

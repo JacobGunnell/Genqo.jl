@@ -4,7 +4,8 @@ install:
 
     just venv
     . python/.venv/bin/activate && \
-    pip install -e python/[test]
+    pip install -e python/[test] && \
+    pip install -e genqo_old_pkg
 
 # Run tests comparing Julia and Python genqo implementations
 test:

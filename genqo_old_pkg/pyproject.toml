@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genqo_old"
+version = "0.0.0"
+description = "Genqo"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Gabe Richardson", email = "rgb@umd.edu"},
+    {name = "Jacob Gunnell", email = "jacob.r.gunnell@gmail.com"},
+]
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "sympy",
+    "tqdm",
+    "matplotlib",
+    "thewalrus",
+    "pandas",
+    "hickle",
+    "joblib",
+    "numba",
+]
+
+[tool.setuptools]
+packages = ["genqo_old"]

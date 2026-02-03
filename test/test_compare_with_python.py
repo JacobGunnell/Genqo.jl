@@ -1,5 +1,5 @@
-import genqo as gqpy
-import genqo_jl as gqjl
+import genqo_old as gqpy
+import genqo as gqjl
 
 import numpy as np
 

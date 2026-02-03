@@ -3,8 +3,8 @@
 import pytest
 import numpy as np
 
-import genqo as gqpy
-import genqo_jl as gqjl
+import genqo_old as gqpy
+import genqo as gqjl
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 """Benchmarks for Python genqo."""
 
 import numpy as np
-import genqo as gqpy
+import genqo_old as gqpy
 
 
 # TMSV benchmarks
