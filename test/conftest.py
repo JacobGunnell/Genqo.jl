@@ -60,6 +60,20 @@ def zalm_test_cases() -> list[dict]:
     return test_cases
 
 @pytest.fixture
+def sigsag_test_cases() -> list[dict]:
+    """Return a list of test cases (dictionary of parameters)."""
+    mean_photons = [1e-4, 1e-3, 1e-2]
+    detection_efficiencies = [1.0, 0.6, 0.34]
+
+    test_cases = []
+    for mean_photon, detection_efficiency in zip(mean_photons, detection_efficiencies):
+        test_cases.append({
+            "mean_photon": mean_photon,
+            "detection_efficiency": detection_efficiency,
+        })
+    return test_cases
+
+@pytest.fixture
 def tmsv_test_case_rand() -> dict:
     """Return a random test case (dictionary of parameters)."""
     params = {
@@ -92,6 +106,15 @@ def zalm_test_case_rand() -> dict:
     return params
 
 @pytest.fixture
+def sigsag_test_case_rand() -> dict:
+    """Return a random test case (dictionary of parameters)."""
+    params = {
+        "mean_photon": 10**np.random.uniform(-5, 1),
+        "detection_efficiency": np.random.uniform(0.5, 1.0),
+    }
+    return params
+
+@pytest.fixture
 def tmsv_py(tmsv_test_case_rand: dict) -> gqpy.TMSV:
     tmsv = gqpy.TMSV()
     tmsv.params.update(tmsv_test_case_rand)
@@ -120,3 +143,13 @@ def zalm_py(zalm_test_case_rand: dict) -> gqpy.ZALM:
 @pytest.fixture
 def zalm_jl(zalm_test_case_rand: dict) -> gqjl.ZALM:
     return gqjl.ZALM().set(**zalm_test_case_rand)
+
+@pytest.fixture
+def sigsag_py(sigsag_test_case_rand: dict) -> gqpy.SIGSAG_BS:
+    sigsag = gqpy.SIGSAG_BS()
+    sigsag.params.update(sigsag_test_case_rand)
+    return sigsag
+
+@pytest.fixture
+def sigsag_jl(sigsag_test_case_rand: dict) -> gqjl.SIGSAG:
+    return gqjl.SIGSAG().set(**sigsag_test_case_rand)

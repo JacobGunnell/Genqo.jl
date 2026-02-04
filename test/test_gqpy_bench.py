@@ -48,6 +48,22 @@ def test_zalm__covariance_matrix(zalm_py: gqpy.ZALM, benchmark):
 def test_zalm__loss_bsm_matrix_fid(zalm_py: gqpy.ZALM, benchmark):
     benchmark(zalm_py.calculate_loss_bsm_matrix_fid)
 
+
+# SIGSAG benchmarks
+
+def test_sigsag__covariance_matrix(sigsag_py: gqpy.SIGSAG_BS, benchmark):
+    benchmark(sigsag_py.calculate_covariance_matrix)
+
+def test_sigsag__loss_bsm_matrix_fid(sigsag_py: gqpy.SIGSAG_BS, benchmark):
+    benchmark(sigsag_py.calculate_loss_matrix_fid)
+
+def test_sigsag__probability_success(sigsag_py: gqpy.SIGSAG_BS, benchmark):
+    benchmark(lambda: sigsag_py.run() and sigsag_py.calculate_probability_success())
+
+def test_sigsag__fidelity(sigsag_py: gqpy.SIGSAG_BS, benchmark):
+    benchmark(lambda: sigsag_py.run() and sigsag_py.calculate_fidelity())
+
+
 # Other benchmarks
 
 def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, benchmark):

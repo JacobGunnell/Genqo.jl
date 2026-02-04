@@ -171,3 +171,31 @@ def k_function_matrix(covariance_matrix: np.ndarray) -> np.ndarray:
             jl.convert(jl.Matrix[jl.Float64], covariance_matrix)
         )
     )
+
+
+@define
+class SIGSAG(GenqoBase):
+    mean_photon: float = field(default=1e-2, validator=ge(0.0))
+    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    bsm_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    outcoupling_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    
+    @_convert_args
+    @_sweepable
+    def covariance_matrix(self) -> np.ndarray:
+        return jl.sigsag.covariance_matrix(self)
+    
+    @_convert_args
+    @_sweepable
+    def loss_bsm_matrix_fid(self) -> np.ndarray:
+        return jl.sigsag.loss_bsm_matrix_fid(self)
+    
+    @_convert_args
+    @_sweepable
+    def probability_success(self) -> float:
+        return jl.sigsag.probability_success(self)
+    
+    @_convert_args
+    @_sweepable
+    def fidelity(self) -> float:
+        return jl.sigsag.fidelity(self)

@@ -53,8 +53,23 @@ suite["zalm.probability_success"]    = @benchmarkable zalm.probability_success(z
 suite["zalm.fidelity"]               = @benchmarkable zalm.fidelity(z)                    setup=(z=rand_zalm())
 
 
+# SIGSAG benchmarks
+
+rand_sigsag() = sigsag.SIGSAG(
+    log_uniform(-5, 1),
+    uniform(0.5, 1.0),
+    uniform(0.5, 1.0),
+    uniform(0.5, 1.0),
+)
+
+suite["sigsag.covariance_matrix"]      = @benchmarkable sigsag.covariance_matrix(s)           setup=(s=rand_sigsag())
+suite["sigsag.loss_bsm_matrix_fid"]    = @benchmarkable sigsag.loss_bsm_matrix_fid(s)         setup=(s=rand_sigsag())
+suite["sigsag.probability_success"]    = @benchmarkable sigsag.probability_success(s)         setup=(s=rand_sigsag())
+suite["sigsag.fidelity"]               = @benchmarkable sigsag.fidelity(s)                    setup=(s=rand_sigsag())
+
+
 # Other benchmarks
-suite["tools.k_function_matrix"]     = @benchmarkable tools.k_function_matrix(cov)        setup=(cov=zalm.covariance_matrix(rand_zalm()))
+suite["tools.k_function_matrix"]     = @benchmarkable tools.k_function_matrix(cov) setup=(cov=zalm.covariance_matrix(rand_zalm()))
 suite["linsweep_1d"]                 = @benchmarkable tmsv.probability_success.(range(1e-4, stop=1e-2, length=100), 0.7)
 suite["linsweep_2d"]                 = @benchmarkable tmsv.probability_success.(range(1e-4, stop=1e-2, length=100), [0.2, 0.5, 0.6, 0.7, 0.9]')
 suite["logsweep_1d"]                 = @benchmarkable tmsv.probability_success.(logrange(1e-4, 1e-2, length=100), 0.7)

@@ -159,6 +159,53 @@ def test_zalm__fidelity(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm_test_cases:
 
         assert np.isclose(fidelity_py, fidelity_jl, atol=tol), error_with_params(params)
 
+# SIGSAG tests
+def test_sigsag__covariance_matrix(sigsag_py: gqpy.SIGSAG_BS, sigsag_jl: gqjl.SIGSAG, sigsag_test_cases: list[dict]) -> None:
+    for params in sigsag_test_cases:
+        sigsag_py.params.update(params)
+        sigsag_py.calculate_covariance_matrix()
+        covariance_matrix_py = sigsag_py.results["covariance_matrix"]
+
+        sigsag_jl.set(**params)
+        covariance_matrix_jl = sigsag_jl.covariance_matrix()
+
+        assert np.allclose(covariance_matrix_py, covariance_matrix_jl, atol=tol), error_with_params(params)
+
+def test_sigsag__loss_bsm_matrix_fid(sigsag_py: gqpy.SIGSAG_BS, sigsag_jl: gqjl.SIGSAG, sigsag_test_cases: list[dict]) -> None:
+    for params in sigsag_test_cases:
+        sigsag_py.params.update(params)
+        sigsag_py.calculate_loss_matrix_fid()
+        loss_bsm_matrix_py = sigsag_py.results["loss_bsm_matrix"]
+
+        sigsag_jl.set(**params)
+        loss_bsm_matrix_jl = sigsag_jl.loss_bsm_matrix_fid()
+
+        assert np.allclose(loss_bsm_matrix_py, loss_bsm_matrix_jl, atol=tol), error_with_params(params)
+
+def test_sigsag__probability_success(sigsag_py: gqpy.SIGSAG_BS, sigsag_jl: gqjl.SIGSAG, sigsag_test_cases: list[dict]) -> None:
+    for params in sigsag_test_cases:
+        sigsag_py.params.update(params)
+        sigsag_py.run()
+        sigsag_py.calculate_probability_success()
+        prob_success_py = sigsag_py.results["probability_success"]
+
+        sigsag_jl.set(**params)
+        prob_success_jl = sigsag_jl.probability_success()
+
+        assert np.isclose(prob_success_py, prob_success_jl, atol=tol), error_with_params(params)
+
+def test_sigsag__fidelity(sigsag_py: gqpy.SIGSAG_BS, sigsag_jl: gqjl.SIGSAG, sigsag_test_cases: list[dict]) -> None:
+    for params in sigsag_test_cases:
+        sigsag_py.params.update(params)
+        sigsag_py.run()
+        sigsag_py.calculate_fidelity()
+        fidelity_py = sigsag_py.results["fidelity"]
+
+        sigsag_jl.set(**params)
+        fidelity_jl = sigsag_jl.fidelity()
+
+        assert np.isclose(fidelity_py, fidelity_jl, atol=tol), error_with_params(params)
+
 
 # Other tests
 def test_tools__k_function_matrix(zalm_py: gqpy.ZALM, zalm_jl: gqjl.ZALM, zalm_test_cases: list[dict]) -> None:
