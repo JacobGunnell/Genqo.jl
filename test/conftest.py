@@ -110,6 +110,8 @@ def sigsag_test_case_rand() -> dict:
     """Return a random test case (dictionary of parameters)."""
     params = {
         "mean_photon": 10**np.random.uniform(-5, 1),
+        "bsm_efficiency": np.random.uniform(0.5, 1.0),
+        "outcoupling_efficiency": np.random.uniform(0.5, 1.0),
         "detection_efficiency": np.random.uniform(0.5, 1.0),
     }
     return params
