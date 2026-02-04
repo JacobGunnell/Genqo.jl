@@ -63,12 +63,16 @@ def zalm_test_cases() -> list[dict]:
 def sigsag_test_cases() -> list[dict]:
     """Return a list of test cases (dictionary of parameters)."""
     mean_photons = [1e-4, 1e-3, 1e-2]
+    bsm_efficiencies = [1.0, 0.5, 0.75]
+    outcoupling_efficiencies = [1.0, 0.75, 0.5]
     detection_efficiencies = [1.0, 0.6, 0.34]
 
     test_cases = []
-    for mean_photon, detection_efficiency in zip(mean_photons, detection_efficiencies):
+    for mean_photon, bsm_efficiency, outcoupling_efficiency, detection_efficiency in zip(mean_photons, bsm_efficiencies, outcoupling_efficiencies, detection_efficiencies):
         test_cases.append({
             "mean_photon": mean_photon,
+            "bsm_efficiency": bsm_efficiency,
+            "outcoupling_efficiency": outcoupling_efficiency,
             "detection_efficiency": detection_efficiency,
         })
     return test_cases
