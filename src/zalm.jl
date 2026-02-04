@@ -86,14 +86,14 @@ covariance_matrix(zalm::ZALM) = covariance_matrix(zalm.mean_photon)
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
 """
 function loss_bsm_matrix_fid(ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
-    G = zeros(ComplexF64, 32, 32)
+    G = zeros(ComplexF64, 4*mds, 4*mds)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
-    for i in 1:8
-        G[i, i+16] = (η[i] - 1)
-        G[i, i+24] = -im*(η[i] - 1)
-        G[i+16, i+8] = im*(η[i] - 1)
-        G[i+24, i+8] = (η[i] - 1)
+    for i in 1:mds
+        G[i,       i+2*mds] = (η[i] - 1)
+        G[i,       i+3*mds] = -im*(η[i] - 1)
+        G[i+2*mds, i+mds  ] = im*(η[i] - 1)
+        G[i+3*mds, i+mds  ] = (η[i] - 1)
     end
 
     return (G + transpose(G) + I) / 2
@@ -111,20 +111,20 @@ Projecting to vacuum implies we only count success if the BSM clicks AND zero si
 are generated, which results in a very small probability and potentially inflates the Fidelity calculation.
 """
 function loss_bsm_matrix_pgen(ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
-    G = zeros(ComplexF64, 32, 32)
+    G = zeros(ComplexF64, 4*mds, 4*mds)
     η = [ηᵗ*ηᵈ, ηᵗ*ηᵈ, ηᵇ, ηᵇ, ηᵇ, ηᵇ, ηᵗ*ηᵈ, ηᵗ*ηᵈ]
 
-    for i in 1:8
+    for i in 1:mds
         if i in (1,2,7,8)
-            G[i, i+16] = -1
-            G[i, i+24] = im
-            G[i+16, i+8] = -im
-            G[i+24, i+8] = -1
+            G[i,       i+2*mds] = -1
+            G[i,       i+3*mds] = im
+            G[i+2*mds, i+mds  ] = -im
+            G[i+3*mds, i+mds  ] = -1
         else
-            G[i, i+16] = (η[i] - 1)
-            G[i, i+24] = -im*(η[i] - 1)
-            G[i+16, i+8] = im*(η[i] - 1)
-            G[i+24, i+8] = (η[i] - 1)
+            G[i,       i+2*mds] = (η[i] - 1)
+            G[i,       i+3*mds] = -im*(η[i] - 1)
+            G[i+2*mds, i+mds  ] = im*(η[i] - 1)
+            G[i+3*mds, i+mds  ] = (η[i] - 1)
         end
     end
 

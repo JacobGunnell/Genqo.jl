@@ -64,10 +64,10 @@ function loss_bsm_matrix_fid(ηᵗ::Real, ηᵈ::Real)
     η = ηᵗ*ηᵈ
 
     for i in 1:4
-        G[i, i+8] = (η - 1)
-        G[i, i+12] = -im*(η - 1)
-        G[i+4, i+8] = im*(η - 1)
-        G[i+4, i+12] = (η - 1)
+        G[i,     i+2*mds] = (η - 1)
+        G[i,     i+3*mds] = -im*(η - 1)
+        G[i+mds, i+2*mds] = im*(η - 1)
+        G[i+mds, i+3*mds] = (η - 1)
     end
 
     return (G + transpose(G) + I) / 2
@@ -81,10 +81,10 @@ loss_bsm_matrix_trace::Matrix{ComplexF64} = begin
     G = zeros(ComplexF64, 16, 16)
 
     for i in 1:4
-        G[i, i+8] = -1
-        G[i, i+12] = im
-        G[i+4, i+8] = -im
-        G[i+4, i+12] = -1
+        G[i,     i+2*mds] = -1
+        G[i,     i+3*mds] = im
+        G[i+mds, i+2*mds] = -im
+        G[i+mds, i+3*mds] = -1
     end
 
     (G + transpose(G) + I) / 2

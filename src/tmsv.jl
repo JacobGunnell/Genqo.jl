@@ -61,10 +61,10 @@ function loss_matrix_pgen(ηᵈ::Real)
     G = zeros(ComplexF64, 8, 8)
 
     for i in 1:2
-        G[i, i+4] = ηᵈ - 1
-        G[i, i+6] = -im*(ηᵈ - 1)
-        G[i+2, i+4] = im*(ηᵈ - 1)
-        G[i+2, i+6] = ηᵈ - 1
+        G[i,     i+2*mds] = ηᵈ - 1
+        G[i,     i+3*mds] = -im*(ηᵈ - 1)
+        G[i+mds, i+2*mds] = im*(ηᵈ - 1)
+        G[i+mds, i+3*mds] = ηᵈ - 1
     end
 
     return (G + transpose(G) + I) / 2
