@@ -56,9 +56,6 @@ function covariance_matrix(μ::Real)
 end
 covariance_matrix(spdc::SPDC) = covariance_matrix(spdc.mean_photon)
 
-# Physical covariance in qqpp ordering (matches Python SPDC.calculate_covariance_matrix())
-covariance_matrix_qqpp(μ::Real) = reorder(covariance_matrix(μ))
-covariance_matrix_qqpp(spdc::SPDC) = covariance_matrix_qqpp(spdc.mean_photon)
 """
 Calculate the loss portion of the A matrix, specifically when calculating the fidelity.
 """
@@ -195,7 +192,7 @@ Numerical complete spin density matrix
 function spin_density_matrix(μ::Real, ηᵗ::Real, ηᵈ::Real, nvec::Vector{Int})
     lmat = 4
     mat = Matrix{ComplexF64}(undef, lmat, lmat)
-    cov = covariance_matrix_qqpp(μ)
+    cov = reorder(covariance_matrix(μ))
     A = k_function_matrix(cov) + loss_bsm_matrix_fid(ηᵗ, ηᵈ)
     Ainv = inv(A)
     Γ = cov + (1/2)*I
@@ -279,7 +276,7 @@ from numerical roundoff.
 Real-valued Bell-state fidelity of the SPDC source for the given parameters.
 """
 function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real)
-    cov = covariance_matrix_qqpp(μ)
+    cov = reorder(covariance_matrix(μ))
 
     # Γ (is gamma in python)
     Γ = cov + (1/2) * I
@@ -312,7 +309,7 @@ function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real)
 
     value = coef * Fsum
     if abs(imag(value)) > 1e-10
-        @warn "SPDC fidelity has nontrivial imaginary part" imag=imag(value) value=value
+        @warn "fidelity has nontrivial imaginary part" imag=imag(value) value=value
     end
     return real(value)
 end
