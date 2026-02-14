@@ -5,13 +5,13 @@ install:
     just venv
     . python/.venv/bin/activate && \
     pip install -e python/[test] && \
-    pip install -e genqo_old_pkg
+    pip install -e test/genqo_old_pkg
 
 # Run tests comparing Julia and Python genqo implementations
 test:
     @echo "Running tests comparing Julia and Python genqo..."
     . python/.venv/bin/activate && \
-    pytest test/test_compare_with_python.py
+    pytest test/python/test_compare_with_python.py
 
 # Run benchmarks for <func>, e.g. just bench spdc.spin_density_matrix (benchmarks all by default)
 bench func="":
@@ -20,8 +20,8 @@ bench func="":
     julia --project=. test/bench.jl "{{func}}"
 
     . python/.venv/bin/activate && \
-    pytest test/test_gqpy_bench.py{{ if func != "" { "::test_" + replace(func, '.', '__') } else { "" } }} --benchmark-json=.benchmarks/py-bench.json && \
-    python test/plot_comparison.py
+    pytest test/python/test_gqpy_bench.py{{ if func != "" { "::test_" + replace(func, '.', '__') } else { "" } }} --benchmark-json=.benchmarks/py-bench.json && \
+    python test/python/plot_comparison.py
 
 # Create virtual environment for Python wrapper
 venv:

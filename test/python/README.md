@@ -1,0 +1,1 @@
+Tests to compare new Genqo.jl with older Genqo (Python) implementation. These tests perform benchmarks and verify numerical agreement.
