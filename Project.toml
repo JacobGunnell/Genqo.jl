@@ -10,6 +10,7 @@ Nemo = "2edaba10-b0f1-5616-af89-8c11ac63239a"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 
 [compat]
+julia = "1.12"
 BenchmarkTools = "1.6.3"
 BlockDiagonals = "0.2.0"
 LinearAlgebra = "1.12.0"
