@@ -3,47 +3,96 @@
 from juliacall import Main as jl
 
 from attrs import define, field
-from attrs.validators import le, ge
-from typing import get_type_hints
-from functools import wraps
 
 import numpy as np
 
-from .sweep import sweep, _sweepable
 
-
-def _convert_args(func: callable) -> callable:
-    if get_type_hints(func).get("return") == np.ndarray:
-        post_call = np.asarray
+def _to_jl_array(arr: np.ndarray):
+    """Convert a numpy array to a Julia array with matching element type."""
+    if arr.dtype == np.complex128:
+        return jl.convert(jl.Array[jl.ComplexF64], arr)
+    elif arr.dtype == np.complex64:
+        return jl.convert(jl.Array[jl.ComplexF32], arr)
+    elif arr.dtype == np.float64:
+        return jl.convert(jl.Array[jl.Float64], arr)
+    elif arr.dtype == np.float32:
+        return jl.convert(jl.Array[jl.Float32], arr)
+    elif np.issubdtype(arr.dtype, np.integer):
+        return jl.convert(jl.Array[jl.Int], arr)
     else:
-        post_call = lambda x: x
+        raise TypeError(f"Unsupported numpy array dtype {arr.dtype}")
 
-    @wraps(func)
-    def wrapper(self, *args, _post_call: callable = post_call):
-        # Python to Julia argument conversion
-        converted_args = []
-        for arg in args:
-            if isinstance(arg, np.ndarray):
-                if arg.dtype == np.complex128:
-                    converted_args.append(jl.convert(jl.Array[jl.ComplexF64], arg))
-                elif arg.dtype == np.complex64:
-                    converted_args.append(jl.convert(jl.Array[jl.ComplexF32], arg))
-                elif arg.dtype == np.float64:
-                    converted_args.append(jl.convert(jl.Array[jl.Float64], arg))
-                elif arg.dtype == np.float32:
-                    converted_args.append(jl.convert(jl.Array[jl.Float32], arg))
-                elif arg.dtype == np.int_:
-                    converted_args.append(jl.convert(jl.Array[jl.Int], arg))
-                else:
-                    raise TypeError(f"Unsupported numpy array dtype {arg.dtype} for argument conversion to Julia.")
-            else:
-                raise TypeError(f"Unsupported argument type {type(arg)} for conversion to Julia.")
-            
-        return _post_call(
-            func(self, *converted_args)
-        )
-    
-    return wrapper
+
+def _jl_call(jl_func, *args, ref_args=()):
+    """Call a Julia function, automatically broadcasting if any arg is a numpy array.
+
+    Shape the arrays to control broadcasting, e.g. a (100,) array broadcast
+    against a (50,1) array produces a (50,100) result -- standard Julia/numpy
+    broadcasting rules.
+
+    Parameters
+    ----------
+    jl_func : Julia function reference
+        The Julia function to call (e.g. ``jl.zalm.fidelity``).
+    *args : float or np.ndarray
+        Arguments passed positionally to ``jl_func``. Scalars are passed
+        through; ndarrays are converted to Julia arrays and broadcast.
+    ref_args : tuple of np.ndarray or scalar
+        Extra arguments (e.g. ``nvec``) that should **not** be broadcast
+        element-wise.  During a broadcast call they are wrapped in
+        ``Ref()`` so Julia treats them as single values.
+
+    Returns
+    -------
+    float, np.ndarray, or Julia value
+        Scalar result when no broadcasting is needed, otherwise a numpy
+        array of broadcast results.
+    """
+    needs_broadcast = any(isinstance(a, np.ndarray) and a.ndim > 0 for a in args)
+
+    # Convert ref_args to Julia types
+    converted_ref = []
+    for a in ref_args:
+        if isinstance(a, np.ndarray):
+            jl_a = _to_jl_array(a)
+            converted_ref.append(jl.Ref(jl_a) if needs_broadcast else jl_a)
+        else:
+            converted_ref.append(a)
+
+    if not needs_broadcast:
+        result = jl_func(*args, *converted_ref)
+        return result
+
+    # Convert array args to Julia arrays for broadcast
+    jl_args = []
+    for a in args:
+        if isinstance(a, np.ndarray):
+            jl_args.append(_to_jl_array(a))
+        else:
+            jl_args.append(a)
+
+    return np.asarray(jl.broadcast(jl_func, *jl_args, *converted_ref))
+
+def _ge(bound):
+    """attrs validator: value >= bound, works with scalars and ndarrays."""
+    def validator(instance, attribute, value):
+        if isinstance(value, np.ndarray):
+            if not np.all(value >= bound):
+                raise ValueError(f"All elements of {attribute.name} must be >= {bound}")
+        elif value < bound:
+            raise ValueError(f"{attribute.name} must be >= {bound}")
+    return validator
+
+def _le(bound):
+    """attrs validator: value <= bound, works with scalars and ndarrays."""
+    def validator(instance, attribute, value):
+        if isinstance(value, np.ndarray):
+            if not np.all(value <= bound):
+                raise ValueError(f"All elements of {attribute.name} must be <= {bound}")
+        elif value > bound:
+            raise ValueError(f"{attribute.name} must be <= {bound}")
+    return validator
+
 
 class GenqoBase:
     @classmethod
@@ -77,92 +126,93 @@ class GenqoBase:
 
 @define
 class TMSV(GenqoBase):
-    mean_photon: float | sweep = field(default=1e-2, validator=ge(0.0))
-    detection_efficiency: float | sweep = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    mean_photon: float | np.ndarray = field(default=1e-2, validator=_ge(0.0))
+    detection_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
 
-    @_convert_args
-    @_sweepable
     def covariance_matrix(self) -> np.ndarray:
-        return jl.tmsv.covariance_matrix(self)
+        return np.asarray(_jl_call(jl.tmsv.covariance_matrix, self.mean_photon))
         
-    @_convert_args
-    @_sweepable
     def loss_matrix_pgen(self) -> np.ndarray:
-        return jl.tmsv.loss_matrix_pgen(self)
+        return np.asarray(_jl_call(jl.tmsv.loss_matrix_pgen, self.detection_efficiency))
     
-    @_convert_args
-    @_sweepable
-    def probability_success(self) -> float:
-        return jl.tmsv.probability_success(self)
+    def probability_success(self):
+        return _jl_call(jl.tmsv.probability_success, self.mean_photon, self.detection_efficiency)
     
 
 @define
 class SPDC(GenqoBase):
-    mean_photon: float = field(default=1e-2, validator=ge(0.0))
-    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
-    bsm_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
-    outcoupling_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    mean_photon: float | np.ndarray = field(default=1e-2, validator=_ge(0.0))
+    detection_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
+    bsm_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
+    outcoupling_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
 
-    @_convert_args
-    @_sweepable
     def covariance_matrix(self) -> np.ndarray:
-        return jl.spdc.covariance_matrix(self)
+        return np.asarray(_jl_call(jl.spdc.covariance_matrix, self.mean_photon))
     
-    @_convert_args
-    @_sweepable
     def loss_bsm_matrix_fid(self) -> np.ndarray:
-        return jl.spdc.loss_bsm_matrix_fid(self)
+        return np.asarray(_jl_call(
+            jl.spdc.loss_bsm_matrix_fid, self.outcoupling_efficiency, self.detection_efficiency
+        ))
     
-    @_convert_args
-    @_sweepable
     def spin_density_matrix(self, nvec: np.ndarray) -> np.ndarray:
-        return jl.spdc.spin_density_matrix(self, nvec)
+        return np.asarray(_jl_call(
+            jl.spdc.spin_density_matrix,
+            self.mean_photon, self.outcoupling_efficiency, self.detection_efficiency,
+            ref_args=(nvec,)
+        ))
     
-    @_convert_args
-    @_sweepable
-    def fidelity(self) -> float:
-        return jl.spdc.fidelity(self)
+    def fidelity(self):
+        return _jl_call(
+            jl.spdc.fidelity, self.mean_photon, self.outcoupling_efficiency, self.detection_efficiency
+        )
     
 
 @define
 class ZALM(GenqoBase):
-    mean_photon: float = field(default=1e-2, validator=ge(0.0))
+    mean_photon: float | np.ndarray = field(default=1e-2, validator=_ge(0.0))
     #schmidt_coeffs: list[float] = field(default_factory=lambda: [1.0])
-    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
-    bsm_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
-    outcoupling_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
-    dark_counts: float = field(default=0.0, validator=ge(0.0))
+    detection_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
+    bsm_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
+    outcoupling_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
+    dark_counts: float | np.ndarray = field(default=0.0, validator=_ge(0.0))
     #visibility: float = 1.0
     
-    @_convert_args
-    @_sweepable
     def covariance_matrix(self) -> np.ndarray:
-        return jl.zalm.covariance_matrix(self)
+        return np.asarray(_jl_call(jl.zalm.covariance_matrix, self.mean_photon))
     
-    @_convert_args
-    @_sweepable
     def loss_bsm_matrix_fid(self) -> np.ndarray:
-        return jl.zalm.loss_bsm_matrix_fid(self)
+        return np.asarray(_jl_call(
+            jl.zalm.loss_bsm_matrix_fid,
+            self.outcoupling_efficiency, self.detection_efficiency, self.bsm_efficiency
+        ))
 
-    @_convert_args
-    @_sweepable
     def loss_bsm_matrix_pgen(self) -> np.ndarray:
-        return jl.zalm.loss_bsm_matrix_pgen(self)
+        return np.asarray(_jl_call(
+            jl.zalm.loss_bsm_matrix_pgen,
+            self.outcoupling_efficiency, self.detection_efficiency, self.bsm_efficiency
+        ))
 
-    @_convert_args
-    @_sweepable
     def spin_density_matrix(self, nvec: np.ndarray) -> np.ndarray:
-        return jl.zalm.spin_density_matrix(self, nvec)
+        return np.asarray(_jl_call(
+            jl.zalm.spin_density_matrix,
+            self.mean_photon, self.outcoupling_efficiency,
+            self.detection_efficiency, self.bsm_efficiency,
+            ref_args=(nvec,)
+        ))
     
-    @_convert_args
-    @_sweepable
-    def probability_success(self) -> float:
-        return jl.zalm.probability_success(self)
+    def probability_success(self):
+        return _jl_call(
+            jl.zalm.probability_success,
+            self.mean_photon, self.outcoupling_efficiency,
+            self.detection_efficiency, self.bsm_efficiency, self.dark_counts
+        )
     
-    @_convert_args
-    @_sweepable
-    def fidelity(self) -> float:
-        return jl.zalm.fidelity(self)
+    def fidelity(self):
+        return _jl_call(
+            jl.zalm.fidelity,
+            self.mean_photon, self.outcoupling_efficiency,
+            self.detection_efficiency, self.bsm_efficiency
+        )
     
     
 def k_function_matrix(covariance_matrix: np.ndarray) -> np.ndarray:
@@ -175,27 +225,27 @@ def k_function_matrix(covariance_matrix: np.ndarray) -> np.ndarray:
 
 @define
 class SIGSAG(GenqoBase):
-    mean_photon: float = field(default=1e-2, validator=ge(0.0))
-    detection_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
-    bsm_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
-    outcoupling_efficiency: float = field(default=1.0, validator=[ge(0.0), le(1.0)])
+    mean_photon: float | np.ndarray = field(default=1e-2, validator=_ge(0.0))
+    detection_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
+    bsm_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
+    outcoupling_efficiency: float | np.ndarray = field(default=1.0, validator=[_ge(0.0), _le(1.0)])
     
-    @_convert_args
-    @_sweepable
     def covariance_matrix(self) -> np.ndarray:
-        return jl.sigsag.covariance_matrix(self)
+        return np.asarray(_jl_call(jl.sigsag.covariance_matrix, self.mean_photon))
     
-    @_convert_args
-    @_sweepable
     def loss_bsm_matrix_fid(self) -> np.ndarray:
-        return jl.sigsag.loss_bsm_matrix_fid(self)
+        return np.asarray(_jl_call(
+            jl.sigsag.loss_bsm_matrix_fid, self.outcoupling_efficiency, self.detection_efficiency
+        ))
     
-    @_convert_args
-    @_sweepable
-    def probability_success(self) -> float:
-        return jl.sigsag.probability_success(self)
+    def probability_success(self):
+        return _jl_call(
+            jl.sigsag.probability_success,
+            self.mean_photon, self.outcoupling_efficiency, self.detection_efficiency
+        )
     
-    @_convert_args
-    @_sweepable
-    def fidelity(self) -> float:
-        return jl.sigsag.fidelity(self)
+    def fidelity(self):
+        return _jl_call(
+            jl.sigsag.fidelity,
+            self.mean_photon, self.outcoupling_efficiency, self.detection_efficiency
+        )

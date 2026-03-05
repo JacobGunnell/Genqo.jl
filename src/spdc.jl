@@ -3,28 +3,17 @@ module spdc
 using BlockDiagonals
 using Nemo
 using LinearAlgebra
-using PythonCall
 
-using ..Genqo: GenqoBase, Sweepable, _pyconvert_sweepable
 import ..tmsv
 using ..tools
 
 
-Base.@kwdef mutable struct SPDC <: GenqoBase
-    mean_photon::Sweepable{AbstractFloat} = 1e-2
-    detection_efficiency::Sweepable{AbstractFloat} = 1.0
-    bsm_efficiency::Sweepable{AbstractFloat} = 1.0
-    outcoupling_efficiency::Sweepable{AbstractFloat} = 1.0
+Base.@kwdef mutable struct SPDC
+    mean_photon::Real = 1e-2
+    detection_efficiency::Real = 1.0
+    bsm_efficiency::Real = 1.0
+    outcoupling_efficiency::Real = 1.0
 end
-Base.convert(::Type{SPDC}, spdc_py::Py) = SPDC(
-    _pyconvert_sweepable(Float64, spdc_py.mean_photon),
-    #pyconvert(Vector{Float64}, spdc_py.schmidt_coeffs),
-    _pyconvert_sweepable(Float64, spdc_py.detection_efficiency),
-    _pyconvert_sweepable(Float64, spdc_py.bsm_efficiency),
-    _pyconvert_sweepable(Float64, spdc_py.outcoupling_efficiency),
-    #pyconvert(Float64, spdc_py.dark_counts),
-    #pyconvert(Float64, spdc_py.visibility),
-)
 
 # Global canonical position and momentum variables
 const mds = 4 # Number of modes for our system
@@ -278,12 +267,12 @@ Real-valued Bell-state fidelity of the SPDC source for the given parameters.
 function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real)
     cov = reorder(covariance_matrix(μ))
 
-    # Γ (is gamma in python)
     Γ = cov + (1/2) * I
     detΓ = det(Γ)
     K = k_function_matrix(cov)
 
-    # --- A1 ---
+    # The loss matrix will be unique for calculating the fidelity    
+    # A1 (fidelity loss)
     A1 = K + loss_bsm_matrix_fid(ηᵗ, ηᵈ)
 
     # Factor + invers
@@ -298,10 +287,8 @@ function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real)
         W(moment_terms[3], Ainv1) +
         W(moment_terms[4], Ainv1)
 
-    # Python: N1 = ((ηd^2)*(ηt^2))^2 = (ηt*ηd)^4
     N1 = (ηᵗ * ηᵈ)^4
 
-    # Python: D2 = det(Γ)^(1/4), D3 = det(conj(Γ))^(1/4)
     D2 = detΓ^(1/4)
     D3 = conj(detΓ)^(1/4)
 

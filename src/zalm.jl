@@ -3,31 +3,20 @@ module zalm
 using BlockDiagonals
 using Nemo
 using LinearAlgebra
-using PythonCall
 
-using ..Genqo: GenqoBase, Sweepable, _pyconvert_sweepable
 import ..spdc
 using ..tools
 
 
-Base.@kwdef mutable struct ZALM <: GenqoBase
-    mean_photon::Sweepable{AbstractFloat} = 1e-2
+Base.@kwdef mutable struct ZALM
+    mean_photon::Real = 1e-2
     #schmidt_coeffs::Vector{Float64}
-    detection_efficiency::Sweepable{AbstractFloat} = 1.0
-    bsm_efficiency::Sweepable{AbstractFloat} = 1.0
-    outcoupling_efficiency::Sweepable{AbstractFloat} = 1.0
-    dark_counts::Sweepable{AbstractFloat} = 0.0
-    #visibility::Sweepable{AbstractFloat} = 1.0
+    detection_efficiency::Real = 1.0
+    bsm_efficiency::Real = 1.0
+    outcoupling_efficiency::Real = 1.0
+    dark_counts::Real = 0.0
+    #visibility::Real = 1.0
 end
-Base.convert(::Type{ZALM}, zalm_py::Py) = ZALM(
-    _pyconvert_sweepable(Float64, zalm_py.mean_photon),
-    #pyconvert(Vector{Float64}, zalm_py.schmidt_coeffs),
-    _pyconvert_sweepable(Float64, zalm_py.detection_efficiency),
-    _pyconvert_sweepable(Float64, zalm_py.bsm_efficiency),
-    _pyconvert_sweepable(Float64, zalm_py.outcoupling_efficiency),
-    _pyconvert_sweepable(Float64, zalm_py.dark_counts),
-    #_pyconvert_sweepable(Float64, zalm_py.visibility),
-)
 
 # Global canonical position and momentum variables
 const mds = 8 # Number of modes for our system
@@ -386,14 +375,14 @@ function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
     K = k_function_matrix(cov)
 
     # The loss matrix will be unique for calculating the fidelity    
-    # --- A1 (fidelity loss) ---
+    # A1 (fidelity loss)
     A1 = K + loss_bsm_matrix_fid(ηᵗ, ηᵈ, ηᵇ)
 
     factoredA1 = lu(A1) # factorizes for reuse
     Ainv1 = inv(factoredA1)
     D1 = sqrt(det(factoredA1)) # reuses factorization
 
-    # ---- Compute W terms (cached) ----
+    # Wick terms (cached)
     Fsum =
         W(moment_terms[1], Ainv1) +
         W(moment_terms[2], Ainv1) +
@@ -416,7 +405,7 @@ function fidelity(μ::Real, ηᵗ::Real, ηᵈ::Real, ηᵇ::Real)
     if abs(imag(value)) > 1e-10
         @warn "fidelity has nontrivial imaginary part" imag=imag(value) value=value
     end
-    return real(value)#<-- is the restriction to real correct?
+    return real(value)
 end
 fidelity(zalm::ZALM) = fidelity(zalm.mean_photon, zalm.outcoupling_efficiency, zalm.detection_efficiency, zalm.bsm_efficiency)
 

@@ -233,8 +233,26 @@ def test_linsweep_1d(tmsv_py: gqpy.TMSV, tmsv_jl: gqjl.TMSV) -> None:
         probability_success_py.append(tmsv_py.results["probability_success"])
 
     tmsv_jl.set(
-        mean_photon = gqjl.linsweep(1e-4, 1e-2, 100),
+        mean_photon = np.linspace(1e-4, 1e-2, 100),
         detection_efficiency = 0.9
+    )
+    probability_success_jl = tmsv_jl.probability_success()
+
+    assert np.allclose(probability_success_py, probability_success_jl, atol=tol), f"Python-Julia sweep comparison failed for mean_photon={mean_photon}"
+
+def test_linsweep_2d(tmsv_py: gqpy.TMSV, tmsv_jl: gqjl.TMSV) -> None:
+    probability_success_py = np.empty((100, 4))
+    for i, mean_photon in enumerate(np.linspace(1e-4, 1e-2, 100)):
+        for j, detection_efficiency in enumerate([0.7, 0.8, 0.9, 1.0]):
+            tmsv_py.params["mean_photon"] = mean_photon
+            tmsv_py.params["detection_efficiency"] = detection_efficiency
+            tmsv_py.run()
+            tmsv_py.calculate_probability_success()
+            probability_success_py[i, j] = tmsv_py.results["probability_success"]
+
+    tmsv_jl.set(
+        mean_photon = np.linspace(1e-4, 1e-2, 100),
+        detection_efficiency = np.array([[0.7, 0.8, 0.9, 1.0]])
     )
     probability_success_jl = tmsv_jl.probability_success()
 
@@ -250,7 +268,7 @@ def test_logsweep_1d(tmsv_py: gqpy.TMSV, tmsv_jl: gqjl.TMSV) -> None:
         probability_success_py.append(tmsv_py.results["probability_success"])
 
     tmsv_jl.set(
-        mean_photon = gqjl.logsweep(1e-4, 1e-2, 100),
+        mean_photon = np.logspace(-4, -2, 100),
         detection_efficiency = 0.9
     )
     probability_success_jl = tmsv_jl.probability_success()

@@ -1,6 +1,5 @@
 module Genqo
 
-include("genqobase.jl")
 include("tools.jl")
 include("tmsv.jl")
 include("spdc.jl")

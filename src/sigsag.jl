@@ -3,25 +3,17 @@ module sigsag
 using LinearAlgebra
 using BlockDiagonals
 using Nemo
-using PythonCall
 
-using ..Genqo: GenqoBase, Sweepable, _pyconvert_sweepable
 import ..spdc
 using ..tools
 
 
-Base.@kwdef mutable struct SIGSAG <: GenqoBase
-    mean_photon::Sweepable{AbstractFloat} = 1e-2
-    detection_efficiency::Sweepable{AbstractFloat} = 1.0
-    bsm_efficiency::Sweepable{AbstractFloat} = 1.0
-    outcoupling_efficiency::Sweepable{AbstractFloat} = 1.0
+Base.@kwdef mutable struct SIGSAG
+    mean_photon::Real = 1e-2
+    detection_efficiency::Real = 1.0
+    bsm_efficiency::Real = 1.0
+    outcoupling_efficiency::Real = 1.0
 end
-Base.convert(::Type{SIGSAG}, sigsag_py::Py) = SIGSAG(
-    _pyconvert_sweepable(Float64, sigsag_py.mean_photon), 
-    _pyconvert_sweepable(Float64, sigsag_py.detection_efficiency),
-    _pyconvert_sweepable(Float64, sigsag_py.bsm_efficiency),
-    _pyconvert_sweepable(Float64, sigsag_py.outcoupling_efficiency),
-)
 
 # Global canonical position and momentum variables
 const mds = 6 # Number of modes for our system

@@ -2,21 +2,14 @@ module tmsv
 
 using Nemo
 using LinearAlgebra
-using PythonCall
 
-using ..Genqo: GenqoBase, Sweepable, _pyconvert_sweepable
 using ..tools
 
 
-# TODO: generalize sweep handling to support explicit arrays of sweep parameters and not just StepRangeLen
-Base.@kwdef mutable struct TMSV <: GenqoBase
-    mean_photon::Sweepable{AbstractFloat} = 1e-2
-    detection_efficiency::Sweepable{AbstractFloat} = 1.0
+Base.@kwdef mutable struct TMSV
+    mean_photon::Real = 1e-2
+    detection_efficiency::Real = 1.0
 end
-Base.convert(::Type{TMSV}, tmsv_py::Py) = TMSV(
-    _pyconvert_sweepable(Float64, tmsv_py.mean_photon), 
-    _pyconvert_sweepable(Float64, tmsv_py.detection_efficiency),
-)
 
 # Global canonical position and momentum variables
 const mds = 2 # Number of modes for our system
