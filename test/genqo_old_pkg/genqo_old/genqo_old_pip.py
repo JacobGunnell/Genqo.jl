@@ -3102,3 +3102,1357 @@ class ZALM:
         closest_element = muvv[index]
 
         return [closest_element, index]
+
+class SIGSAG:
+
+    """
+    This class cooresponds to calculating quantities related to the coorelated pairs for the single-sagnac source, not the completed bell state
+    """
+
+    def __init__(self, param=TYP_PARAMS):
+
+        self.params = param
+
+        self.status = 0
+        self.results = {
+            "covariance_matrix": None,
+            "k_function_matrix": None,
+            "loss_bsm_matrix": None,
+            "bsm_matrix": None,
+            "output_state": None,
+            "output_state_basis": None,
+            "fidelity": None,
+            "fidelity_spin_spin": None,
+            "hashing_bound": None,
+            "probability_success": None,
+            "Gamma": None,
+            "density_matrix": None,
+            "density_matrix_post_bsm": None,
+            "fock_pgen": None,
+        }
+
+    def run(self):
+        self.calculate_covariance_matrix()
+        # Calculate k function matrix
+        self.calculate_k_function_matrix()
+
+
+    def calculate_covariance_matrix(self):
+
+        # The initial ZALM covariance matrix, in the qpqp ordering
+        covar = SPDC.spdc_covar(self.params["mean_photon"])
+
+        ## Go from qpqp to qqpp
+        idx_even = []
+        idx_odd = []
+        for ix in range(8):
+            if ix % 2 == 0:
+                idx_even = np.append(idx_even, int(ix))
+            else:
+                idx_odd = np.append(idx_odd, int(ix))
+
+        permutation_indices = np.array(np.append(np.array(idx_even), np.array(idx_odd)))
+        permute_matrix = tools.permutation_matrix(permutation_indices)
+        covar2 = (
+            permute_matrix @ covar @ np.transpose(permute_matrix)
+        )
+
+        self.results["covariance_matrix"] = covar2
+
+    def calculate_k_function_matrix(self):
+        # Calculating the K function portion of the A matrix
+        Gamma = self.results["covariance_matrix"] + 0.5 * np.eye(
+            self.results["covariance_matrix"].shape[0]
+        )
+
+        self.results["Gamma"] = Gamma
+        Gamma_inverse = np.linalg.inv(Gamma)
+
+        matrix_size = int(Gamma_inverse.shape[1] / 2)
+        Ap = Gamma_inverse[:matrix_size, :matrix_size]
+        Cp = Gamma_inverse[:matrix_size, matrix_size:]
+        Bp = Gamma_inverse[matrix_size:, matrix_size:]
+
+        script_B = (0.5)*np.block(
+            [
+                [Ap + 0.5*(1j)*(Cp + Cp.T), Cp - 0.5*(1j)*(Ap - Bp)],
+                [Cp.T - 0.5*(1j)*(Ap - Bp),Bp - 0.5*(1j)*(Cp + Cp.T),
+                ],
+            ]
+        )
+
+        self.results["k_function_matrix"] = block_diag(script_B, script_B.conjugate())
+        return block_diag(script_B, script_B.conjugate())
+
+    """
+    Depending on the parameter that we are calculating, it will have a unique contribution to the A matrix, which is what we calulate in the following functions
+    """
+
+    def calculate_loss_matrix_fid(self):
+        # Ordering is qqpp in every sub-block; compensated by appropriate basis vector later
+        def sub_loss_fid(eta_t, eta_d):
+            G = np.zeros((16, 16), dtype=np.complex128)
+            eta = np.array([eta_d, eta_d, eta_t, eta_t])
+
+            for i in range(4):
+                G[i, i+8] = (eta[i] - 1)
+                G[i, i+12] = -1j*(eta[i] - 1)
+                G[i+4, i+8] = 1j*(eta[i] - 1)
+                G[i+4, i+12] = (eta[i] - 1)
+            return (0.5)*G + (0.5)*np.transpose(G) + (0.5)*np.eye(16)
+
+        self.results["loss_bsm_matrix"] = sub_loss_fid(self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+    def calculate_loss_bsm_matrix_pgen(self):
+        # Ordering is qqpp in every sub-block; compensated by appropriate basis vector later
+        def sub_loss_pgen(eta_t, eta_d, eta_b):
+            G = np.zeros((16, 16), dtype=np.complex128)
+            eta = np.array([eta_d, eta_d, eta_t, eta_t])
+
+            for i in range(4):
+                if i==0 or i==1:
+                    G[i, i+8] = (eta[i]-1)
+                    G[i, i+12] = (-1j)*(eta[i]-1)
+                    G[i+4, i+8] = (1j)*(eta[i]-1)
+                    G[i+4, i+12] = (eta[i]-1)
+                else:
+                    G[i, i+8] = (-1)
+                    G[i, i+12] = (-1j)*(-1)
+                    G[i+4, i+8] = (1j)*(-1)
+                    G[i+4, i+12] = (-1)
+            return (0.5)*G + (0.5)*np.transpose(G) + (0.5)*np.eye(16)
+
+        self.results["loss_bsm_matrix"] = sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+        return sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+
+
+    """
+    Functions that calculate parameters of interest for the photon-photon state
+    """
+
+    def calculate_probability_success(self):
+        mds = 4  # Number of modes for our system
+
+        # First, define our basis vector
+        x = ZALM.basisvZ(mds)  # Because we corrected the basis vector of our covariance matrix, we need to use a different basis vector for the Wick coupling
+
+        # The loss matrix will be unique for calculating the probability of generation
+        self.calculate_loss_bsm_matrix_pgen()
+        self.calculate_k_function_matrix()
+
+        nA = (self.results["k_function_matrix"] + self.results["loss_bsm_matrix"])
+        Gam = self.results["Gamma"]
+
+        N1 = 1 #((self.params["bsm_efficiency"])**2)
+        D1 = np.sqrt(np.linalg.det(nA))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+        Coef = (N1)/(D1 * D2 * D3)
+
+        C = SIGSAG.moment_vector([0,0], [0,0], self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+        self.results["probability_success"] = Coef*tools.W(C,nA,x) #4 * Coef * val(ZALM.moment_vector(self.params["schmidt_coeffs"], 0), nAinv, x)
+
+    def calculate_fidelity(self):
+        mds = 4  # Number of modes for our system
+
+        # First, define our basis vector
+        x = ZALM.basisvZ(mds)  # Because we corrected the basis vector of our covariance matrix, we need to use a different basis vector for the Wick coupling
+
+        etat = self.params["outcoupling_efficiency"]
+        etad = self.params["detection_efficiency"]
+        # Define the matrix element
+        Cn1 = SIGSAG.moment_vector([1,1],[1,1], etat, etad)
+        # Cn2 = SIGSAG.moment_vector([1,0],[0,1], etat, etad)
+        # Cn3 = SIGSAG.moment_vector([0,1],[1,0], etat, etad)
+        # Cn4 = SIGSAG.moment_vector([0,1],[0,1], etat, etad)
+
+        # Cn1 = SIGSAG.moment_vector_tst(1, etat, etad)
+        # Cn2 = SIGSAG.moment_vector_tst(2, etat, etad)
+        # Cn3 = SIGSAG.moment_vector_tst(3, etat, etad)
+        # Cn4 = SIGSAG.moment_vector_tst(4, etat, etad)
+
+        # The loss matrix will be unique for calculating the fidelity
+        self.calculate_loss_matrix_fid()
+        self.calculate_k_function_matrix()
+
+        nA1 = np.real(self.results["k_function_matrix"] + self.results["loss_bsm_matrix"])
+        Gam = self.results["Gamma"]
+
+        F1 = tools.W(Cn1, nA1, x)
+        # print(F1)
+        # F2 = tools.W(Cn2, nA1, x)
+        # print(F2)
+        # F3 = tools.W(Cn3, nA1, x)
+        # print(F3)
+        # F4 = tools.W(Cn4, nA1, x)
+        # print(F4)
+
+        D1 = np.sqrt(np.linalg.det(nA1))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+
+        self.calculate_probability_success()
+        pgen = self.results["probability_success"]
+
+        Coef = (1)/(2*D1*D2*D3*pgen)
+
+        self.results["fidelity"] = Coef*(F1) #+ F2 + F3 + F4)
+
+    """
+    Defining helper functions that are used
+    """
+    @staticmethod
+    def spdc_covar(mu):
+        # Ordering qpqp
+        # Mode swap for polarization entnaglement
+        permutation_indices = [0, 1, 6, 7, 4, 5, 2, 3]
+        permute_matrix = tools.permutation_matrix(permutation_indices)
+        return (
+            permute_matrix
+            @ block_diag(TMSV.tmsv_covar(mu), TMSV.tmsv_covar(mu))
+            @ np.transpose(permute_matrix)
+        )
+
+    @staticmethod
+    def moment_vector(nvec1, nvec2, etat, etad):
+        """
+        Arguments
+        - lambda_vector: The vector of lambda_i's
+        - dmi: The row cooresponding to the density matrix element of interest
+        - dmj: The collumn cooresponding to the density matrix element of interest
+        Output
+        - An array of all of the moments that are to be calculated
+
+        *Presently, this only works for the cascaded source
+        TODO : Rename variables
+        """
+        mds = 4  # Number of modes for our system
+
+        # For the number of modes desired, create a vector of (q/p)_{\alphas / \beta}'s
+        qai = [sp.symbols("qa{}".format(i)) for i in range(1, mds + 1)]
+        pai = [sp.symbols("pa{}".format(i)) for i in range(1, mds + 1)]
+        qbi = [sp.symbols("qb{}".format(i)) for i in range(1, mds + 1)]
+        pbi = [sp.symbols("pb{}".format(i)) for i in range(1, mds + 1)]
+
+        # Define the alpha and beta vectors
+        alp = []
+        bet = []
+        j = 0
+        while j < mds:
+            alp.append((1 / np.sqrt(2)) * (qai[j] + sp.I * pai[j]))
+            bet.append(
+                (1 / np.sqrt(2)) * (qbi[j] - sp.I * pbi[j])
+            )  # We have already taken the complex conjugate
+            j += 1
+
+        # # First, the coefficients for the signal modes, which will always be detecting one photon
+        # Ca13 = np.sqrt(etad) * alp[0] * np.sqrt(etad) * alp[2]
+        # Cb13 = np.sqrt(etad) * bet[0] * np.sqrt(etad) * bet[2]
+
+        # # Next, the coefficients for the idler modes
+        # Ca24 = (((alp[1]*np.sqrt(etat))**(nvec1[0]))/(np.sqrt(math.factorial(nvec1[0]))))*((alp[3]*np.sqrt(etat))**(nvec1[1])/(np.sqrt(math.factorial(nvec1[1]))))
+        # Cb24 = (((bet[1]*np.sqrt(etat))**(nvec2[0]))/(np.sqrt(math.factorial(nvec2[0]))))*((bet[3]*np.sqrt(etat))**(nvec2[1])/(np.sqrt(math.factorial(nvec2[1]))))
+
+        # First, the coefficients for the signal modes, which will always be detecting one photon
+        Ca13 = np.sqrt(etad) * alp[0] * np.sqrt(etad) * alp[1]
+        Cb13 = np.sqrt(etad) * bet[0] * np.sqrt(etad) * bet[1]
+
+        # Next, the coefficients for the idler modes
+        Ca24 = (((alp[2]*np.sqrt(etat))**(nvec1[0]))/(np.sqrt(math.factorial(nvec1[0]))))*((alp[3]*np.sqrt(etat))**(nvec1[1])/(np.sqrt(math.factorial(nvec1[1]))))
+        Cb24 = (((bet[2]*np.sqrt(etat))**(nvec2[0]))/(np.sqrt(math.factorial(nvec2[0]))))*((bet[3]*np.sqrt(etat))**(nvec2[1])/(np.sqrt(math.factorial(nvec2[1]))))
+
+
+
+
+        C = Ca13 * Cb13 * Ca24 * Cb24
+
+        # Seperating the coefficients in a way that can be used by the Wick coupling function
+        C = sp.expand(C)
+        Cv = C.as_ordered_terms()
+
+        # Change the format just slightly
+        Cout = []
+        i = 0
+        while i < len(Cv):
+            Cout.append(Cv[i].as_ordered_factors())
+            i += 1
+
+        # Doing a little bit extra to handle the powers
+        Coutf = []
+        for i in Cout:
+            # print(i)
+            Coutf.append(tools.expand_powers_to_symbols(i))
+
+        return Coutf
+
+    @staticmethod
+    def moment_vector_tst(c, etat, etad):
+        """
+        Arguments
+        - lambda_vector: The vector of lambda_i's
+        - dmi: The row cooresponding to the density matrix element of interest
+        - dmj: The collumn cooresponding to the density matrix element of interest
+        Output
+        - An array of all of the moments that are to be calculated
+
+        *Presently, this only works for the cascaded source
+        TODO : Rename variables
+        """
+        mds = 4  # Number of modes for our system
+
+        # For the number of modes desired, create a vector of (q/p)_{\alphas / \beta}'s
+        qai = [sp.symbols("qa{}".format(i)) for i in range(1, mds + 1)]
+        pai = [sp.symbols("pa{}".format(i)) for i in range(1, mds + 1)]
+        qbi = [sp.symbols("qb{}".format(i)) for i in range(1, mds + 1)]
+        pbi = [sp.symbols("pb{}".format(i)) for i in range(1, mds + 1)]
+
+        # Define the alpha and beta vectors
+        alp = []
+        bet = []
+        j = 0
+        while j < mds:
+            alp.append((1 / np.sqrt(2)) * (qai[j] + sp.I * pai[j]))
+            bet.append(
+                (1 / np.sqrt(2)) * (qbi[j] - sp.I * pbi[j])
+            )  # We have already taken the complex conjugate
+            j += 1
+
+        # First, the coefficients for the signal modes, which will always be detecting one photon
+        Ca13 = np.sqrt(etad) * alp[0] * np.sqrt(etad) * alp[1]
+        Cb13 = np.sqrt(etad) * bet[0] * np.sqrt(etad) * bet[1]
+
+        # Next, the coefficients for the idler modes
+        # if c == 1:
+        #     Ca24 = alp[1] * np.sqrt(etat)
+        #     Cb24 = bet[1] * np.sqrt(etat)
+        # elif c == 2:
+        #     Ca24 = alp[1] * np.sqrt(etat)
+        #     Cb24 = bet[3] * np.sqrt(etat)
+        # elif c == 3:
+        #     Ca24 = alp[3] * np.sqrt(etat)
+        #     Cb24 = bet[1] * np.sqrt(etat)
+        # elif c == 4:
+        #     Ca24 = alp[3] * np.sqrt(etat)
+        #     Cb24 = bet[3] * np.sqrt(etat)
+
+        if c == 1:
+            Ca24 = (alp[2] * np.sqrt(etat) + alp[3] * np.sqrt(etat))/np.sqrt(2)
+            Cb24 = (bet[2] * np.sqrt(etat) + bet[3] * np.sqrt(etat))/np.sqrt(2)
+        elif c == 2:
+            Ca24 = (alp[2] * np.sqrt(etat) + alp[3] * np.sqrt(etat))/np.sqrt(2)
+            Cb24 = (bet[2] * np.sqrt(etat) - bet[3] * np.sqrt(etat))/np.sqrt(2)
+        elif c == 3:
+            Ca24 = (alp[2] * np.sqrt(etat) - alp[3] * np.sqrt(etat))/np.sqrt(2)
+            Cb24 = (bet[2] * np.sqrt(etat) + bet[3] * np.sqrt(etat))/np.sqrt(2)
+        elif c == 4:
+            Ca24 = (alp[2] * np.sqrt(etat) - alp[3] * np.sqrt(etat))/np.sqrt(2)
+            Cb24 = (bet[2] * np.sqrt(etat) - bet[3] * np.sqrt(etat))/np.sqrt(2)
+
+        C = Ca13 * Cb13 * Ca24 * Cb24
+
+        # Seperating the coefficients in a way that can be used by the Wick coupling function
+        C = sp.expand(C)
+        Cv = C.as_ordered_terms()
+
+        # Change the format just slightly
+        Cout = []
+        i = 0
+        while i < len(Cv):
+            Cout.append(Cv[i].as_ordered_factors())
+            i += 1
+
+        # Doing a little bit extra to handle the powers
+        Coutf = []
+        for i in Cout:
+            # print(i)
+            Coutf.append(tools.expand_powers_to_symbols(i))
+
+        return Coutf
+
+
+class SIGSAG_BS:
+
+    """
+    This class cooresponds to calculating the bell state produced by the single-sagnac source
+    """
+
+    def __init__(self, param=TYP_PARAMS):
+
+        self.params = param
+
+        self.status = 0
+        self.results = {
+            "covariance_matrix": None,
+            "k_function_matrix": None,
+            "loss_bsm_matrix": None,
+            "bsm_matrix": None,
+            "output_state": None,
+            "output_state_basis": None,
+            "fidelity": None,
+            "fidelity_spin_spin": None,
+            "hashing_bound": None,
+            "probability_success": None,
+            "Gamma": None,
+            "density_matrix": None,
+            "density_matrix_post_bsm": None,
+            "fock_pgen": None,
+        }
+
+    def run(self):
+        self.calculate_covariance_matrix()
+        # Calculate k function matrix
+        self.calculate_k_function_matrix()
+
+
+    def calculate_covariance_matrix(self):
+
+        # The initial SPDC source covariance matrix, in the qpqp ordering
+        covar = SIGSAG_BS.spdc_covar(self.params["mean_photon"])
+
+        # Incorporating 4 vacuum modes
+        covar = block_diag(covar, SIGSAG_BS.vac_covar(2))
+
+        ## Go from qpqp to qqpp
+        idx_even = []
+        idx_odd = []
+        for ix in range(12):
+            if ix % 2 == 0:
+                idx_even = np.append(idx_even, int(ix))
+            else:
+                idx_odd = np.append(idx_odd, int(ix))
+
+        permutation_indices = np.array(np.append(np.array(idx_even), np.array(idx_odd)))
+        permute_matrix = tools.permutation_matrix(permutation_indices)
+        covar2 = (
+            permute_matrix @ covar @ np.transpose(permute_matrix)
+        )
+
+        # Apply beamsplitter between idler modes and vacuum modes
+        # First, a beamsplitter between modes 3 and 5
+        Id2 = np.identity(2)
+        St35 = np.array([[np.sqrt(0.5), 0, np.sqrt(0.5), 0],[0,1,0,0],
+                    [-np.sqrt(0.5), 0, np.sqrt(0.5),0],[0,0,0,1]])
+        # Next, a beamsplitter between modes 4 and 6
+        St46 = np.array([[1, 0, 0, 0],[0,np.sqrt(0.5),0,np.sqrt(0.5)],
+                    [0, 0, 1, 0],[0,-np.sqrt(0.5),0,np.sqrt(0.5)]])
+
+        S35 = block_diag(Id2, St35, Id2, St35)
+        S46 = block_diag(Id2, St46, Id2, St46)
+
+        self.results["covariance_matrix"] = S46@S35@covar2@np.transpose(S35)@np.transpose(S46)
+
+    def calculate_k_function_matrix(self):
+        # Calculating the K function portion of the A matrix
+        Gamma = self.results["covariance_matrix"] + 0.5 * np.eye(
+            self.results["covariance_matrix"].shape[0]
+        )
+
+        self.results["Gamma"] = Gamma
+        Gamma_inverse = np.linalg.inv(Gamma)
+
+        matrix_size = int(Gamma_inverse.shape[1] / 2)
+        Ap = Gamma_inverse[:matrix_size, :matrix_size]
+        Cp = Gamma_inverse[:matrix_size, matrix_size:]
+        Bp = Gamma_inverse[matrix_size:, matrix_size:]
+
+        script_B = (0.5)*np.block(
+            [
+                [Ap + 0.5*(1j)*(Cp + Cp.T), Cp - 0.5*(1j)*(Ap - Bp)],
+                [Cp.T - 0.5*(1j)*(Ap - Bp),Bp - 0.5*(1j)*(Cp + Cp.T),
+                ],
+            ]
+        )
+
+        self.results["k_function_matrix"] = block_diag(script_B, script_B.conjugate())
+        return block_diag(script_B, script_B.conjugate())
+
+    """
+    Depending on the parameter that we are calculating, it will have a unique contribution to the A matrix, which is what we calulate in the following functions
+    """
+
+    def calculate_loss_matrix_fid(self):
+        # Ordering is qqpp in every sub-block; compensated by appropriate basis vector later
+        def sub_loss_fid(eta_t, eta_d):
+            G = np.zeros((24, 24), dtype=np.complex128)
+            eta = np.array([eta_d, eta_d, eta_t, eta_t, eta_t, eta_t])
+
+            for i in range(6):
+                G[i, i+12] = (eta[i] - 1)
+                G[i, i+18] = -1j*(eta[i] - 1)
+                G[i+6, i+12] = 1j*(eta[i] - 1)
+                G[i+6, i+18] = (eta[i] - 1)
+            return (0.5)*G + (0.5)*np.transpose(G) + (0.5)*np.eye(24)
+
+        self.results["loss_bsm_matrix"] = sub_loss_fid(self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+    def calculate_loss_bsm_matrix_pgen(self):
+        # Ordering is qqpp in every sub-block; compensated by appropriate basis vector later
+        def sub_loss_pgen(eta_t, eta_d, eta_b):
+            G = np.zeros((24, 24), dtype=np.complex128)
+            eta = np.array([eta_d, eta_d, eta_t, eta_t, eta_t, eta_t])
+
+            for i in range(6):
+                if i==2 or i==3 or i==4 or i==5:
+                    G[i, i+12] = (-1)
+                    G[i, i+18] = (-1j)*(-1)
+                    G[i+6, i+12] = (1j)*(-1)
+                    G[i+6, i+18] = (-1)
+                else:
+                    G[i, i+12] = (eta[i]-1)
+                    G[i, i+18] = (-1j)*(eta[i]-1)
+                    G[i+6, i+12] = (1j)*(eta[i]-1)
+                    G[i+6, i+18] = (eta[i]-1)
+            return (0.5)*G + (0.5)*np.transpose(G) + (0.5)*np.eye(24)
+
+        self.results["loss_bsm_matrix"] = sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+        return sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+
+    def calculate_loss_bsm_matrix_pgen_loadable_1(self):
+        # Ordering is qqpp in every sub-block; compensated by appropriate basis vector later
+        def sub_loss_pgen(eta_t, eta_d, eta_b):
+            G = np.zeros((24, 24), dtype=np.complex128)
+            eta = np.array([eta_d, eta_d, eta_t, eta_t, eta_t, eta_t])
+
+            for i in range(6):
+                if i==2 or i==3:
+                    G[i, i+12] = (-1)
+                    G[i, i+18] = (-1j)*(-1)
+                    G[i+6, i+12] = (1j)*(-1)
+                    G[i+6, i+18] = (-1)
+                else:
+                    G[i, i+12] = (eta[i]-1)
+                    G[i, i+18] = (-1j)*(eta[i]-1)
+                    G[i+6, i+12] = (1j)*(eta[i]-1)
+                    G[i+6, i+18] = (eta[i]-1)
+            return (0.5)*G + (0.5)*np.transpose(G) + (0.5)*np.eye(24)
+
+        self.results["loss_bsm_matrix"] = sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+        return sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+
+    def calculate_loss_bsm_matrix_pgen_loadable_2(self):
+        # Ordering is qqpp in every sub-block; compensated by appropriate basis vector later
+        def sub_loss_pgen(eta_t, eta_d, eta_b):
+            G = np.zeros((24, 24), dtype=np.complex128)
+            eta = np.array([eta_d, eta_d, eta_t, eta_t, eta_t, eta_t])
+
+            for i in range(6):
+                if i==3 or i==4:
+                    G[i, i+12] = (-1)
+                    G[i, i+18] = (-1j)*(-1)
+                    G[i+6, i+12] = (1j)*(-1)
+                    G[i+6, i+18] = (-1)
+                else:
+                    G[i, i+12] = (eta[i]-1)
+                    G[i, i+18] = (-1j)*(eta[i]-1)
+                    G[i+6, i+12] = (1j)*(eta[i]-1)
+                    G[i+6, i+18] = (eta[i]-1)
+            return (0.5)*G + (0.5)*np.transpose(G) + (0.5)*np.eye(24)
+
+        self.results["loss_bsm_matrix"] = sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+        return sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+
+    def calculate_loss_bsm_matrix_pgen_loadable_3(self):
+        # Ordering is qqpp in every sub-block; compensated by appropriate basis vector later
+        def sub_loss_pgen(eta_t, eta_d, eta_b):
+            G = np.zeros((24, 24), dtype=np.complex128)
+            eta = np.array([eta_d, eta_d, eta_t, eta_t, eta_t, eta_t])
+
+            for i in range(6):
+                G[i, i+12] = (eta[i]-1)
+                G[i, i+18] = (-1j)*(eta[i]-1)
+                G[i+6, i+12] = (1j)*(eta[i]-1)
+                G[i+6, i+18] = (eta[i]-1)
+            return (0.5)*G + (0.5)*np.transpose(G) + (0.5)*np.eye(24)
+
+        self.results["loss_bsm_matrix"] = sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+        return sub_loss_pgen(self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+
+
+    """
+    Functions that calculate parameters of interest for the photon-photon state
+    """
+
+    def calculate_probability_success(self):
+        mds = 6  # Number of modes for our system
+
+        # First, define our basis vector
+        x = ZALM.basisvZ(mds)  # Because we corrected the basis vector of our covariance matrix, we need to use a different basis vector for the Wick coupling
+
+        # The loss matrix will be unique for calculating the probability of generation
+        self.calculate_loss_bsm_matrix_pgen()
+        self.calculate_k_function_matrix()
+
+        nA = (self.results["k_function_matrix"] + self.results["loss_bsm_matrix"])
+        Gam = self.results["Gamma"]
+
+        N1 = 1 #((self.params["bsm_efficiency"])**2)
+        D1 = np.sqrt(np.linalg.det(nA))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+        Coef = (N1)/(D1 * D2 * D3)
+
+        C = SIGSAG.moment_vector([0,0,0,0], [0,0,0,0], self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+        self.results["probability_success"] = Coef*tools.W(C,nA,x) #4 * Coef * val(ZALM.moment_vector(self.params["schmidt_coeffs"], 0), nAinv, x)
+
+    def calculate_fidelity(self):
+        mds = 6  # Number of modes for our system
+
+        # First, define our basis vector
+        x = ZALM.basisvZ(mds)  # Because we corrected the basis vector of our covariance matrix, we need to use a different basis vector for the Wick coupling
+
+        etat = self.params["outcoupling_efficiency"]
+        etad = self.params["detection_efficiency"]
+        # # Define the matrix element
+        Cn1 = SIGSAG_BS.moment_vector_tuple([1,0,0,1],[1,0,0,1], etat, etad)
+        Cn2 = SIGSAG_BS.moment_vector_tuple([0,1,1,0],[0,1,1,0], etat, etad)
+        Cn3 = SIGSAG_BS.moment_vector_tuple([1,0,0,1],[0,1,1,0], etat, etad)
+        Cn4 = SIGSAG_BS.moment_vector_tuple([0,1,1,0],[1,0,0,1], etat, etad)
+
+
+        # The loss matrix will be unique for calculating the fidelity
+        self.calculate_loss_matrix_fid()
+        self.calculate_k_function_matrix()
+
+        nA1 = self.results["k_function_matrix"] + self.results["loss_bsm_matrix"]
+        Gam = self.results["Gamma"]
+
+        F1 = SIGSAG_BS.dmatval_do_not_store_looping_pattern(Cn1, nA1, x)
+        F2 = SIGSAG_BS.dmatval_do_not_store_looping_pattern(Cn2, nA1, x)
+        F3 = SIGSAG_BS.dmatval_do_not_store_looping_pattern(Cn3, nA1, x)
+        F4 = SIGSAG_BS.dmatval_do_not_store_looping_pattern(Cn4, nA1, x)
+
+        D1 = np.sqrt(np.linalg.det(nA1))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+
+        self.calculate_probability_success()
+        pgen = self.results["probability_success"]
+
+        Coef = (1)/(2*D1*D2*D3*pgen)
+
+        self.results["fidelity"] = Coef*(F1 + F2 + F3 + F4)
+
+
+    """
+    Functions for calculating the spin-spin state (not yet updated for single-sagnac)
+    """
+
+    def calculate_density_operator(self, nvec):
+        """
+        Arguments
+        - nvec: The vector of n_i's for the system, where n_i is the number of photons in mode i
+        Output
+        - The numerical complete spin density matrix
+        """
+        if self.status == 0:
+            self.run()
+
+        lmat = 4  # Number of modes for our system
+        mat = np.zeros((lmat, lmat), dtype=np.complex128)
+
+        # Set the A matrix
+        self.calculate_loss_matrix_fid()
+        self.calculate_k_function_matrix()
+        nA = self.results["k_function_matrix"] + self.results["loss_bsm_matrix"]
+        nAnv = np.linalg.inv(nA)
+
+        Gam = self.results["Gamma"]
+        D1 = np.sqrt(np.linalg.det(nA))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+        Coef = (1)/(4*D1 * D2 * D3)
+
+        for i in range(lmat):
+            for j in range(lmat):
+                mat[i, j] = SIGSAG_BS.dmijZ([1], i, j, nAnv, nvec, self.params["outcoupling_efficiency"], self.params["detection_efficiency"], self.params["bsm_efficiency"])
+
+        self.results["output_state"] = Coef*mat # This is the unnormalized density matrix
+
+    @staticmethod
+    def dmijZ(lamvec, dmi, dmj, nAinv, nvec, eta_t, eta_d, eta_b):
+        """
+        Arguments:
+        - nAinv: The numerical inverse of the A matrix
+        - lamvec: The vectors of lambdas for the system
+        - dmi: The row number for the cooresponding density matrix element
+        - dmj: The collumn number for the cooresponding density matrix element
+        - nvec: The vector of n_i's for the system, where n_i is the number of photons in mode i
+        - eta_t: The transmission efficiency
+        - eta_d: The detection efficiency
+        - eta_b: The Bell state measurement efficiency
+        Output:
+        - The density matrix element for the ZALM source
+        """
+
+        mds = 6
+
+        # First, define our basis vector which cooresponds to the A matrix
+        x = ZALM.basisvZ(mds)
+
+        # Define the matrix element
+        Cn = SIGSAG_BS.moment_vector_with_memory(dmi, dmj, nvec, eta_t, eta_d)
+
+        return SIGSAG_BS.dmatval_do_not_store_looping_pattern(Cn, nAinv, x)
+
+    @staticmethod
+    def moment_vector_with_memory(dmi, dmj, nvec, eta_t, eta_d):
+        """
+        Arguments
+        - lambda_vector: The vector of lambda_i's
+        - dmi: The row cooresponding to the density matrix element of interest
+        - dmj: The collumn cooresponding to the density matrix element of interest
+        Output
+        - An array of all of the moments that are to be calculated
+
+        *Presently, this only works for the cascaded source
+        TODO : Rename variables
+        """
+        mds = 6  # Number of modes for our system
+
+        # For the number of modes desired, create a vector of (q/p)_{\alphas / \beta}'s
+        qai = [sp.symbols("qa{}".format(i)) for i in range(1, mds + 1)]
+        pai = [sp.symbols("pa{}".format(i)) for i in range(1, mds + 1)]
+        qbi = [sp.symbols("qb{}".format(i)) for i in range(1, mds + 1)]
+        pbi = [sp.symbols("pb{}".format(i)) for i in range(1, mds + 1)]
+
+        # Define the alpha and beta vectors
+        alp = []
+        bet = []
+        j = 0
+        while j < mds:
+            alp.append((1 / np.sqrt(2)) * (qai[j] + sp.I * pai[j]))
+            bet.append(
+                (1 / np.sqrt(2)) * (qbi[j] - sp.I * pbi[j])
+            )  # We have already taken the complex conjugate
+            j += 1
+
+        etav = np.array([eta_d, eta_d, eta_t, eta_t, eta_t, eta_t])
+
+
+        if dmi == 0:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        elif dmi == 1:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        elif dmi == 2:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        elif dmi == 3:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        else:
+            Ca = 1
+
+        if dmj == 0:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        elif dmj == 1:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        elif dmj == 2:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        elif dmj == 3:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        else:
+            Cb = 1
+
+        C1 = (alp[0]*bet[0]*etav[0])**(nvec[0])/math.factorial(nvec[0])
+        C2 = (alp[1]*bet[1]*etav[1])**(nvec[1])/math.factorial(nvec[1])
+        C = C1*C2*Ca*Cb
+
+        # Convert polynomial expression to regular expression and expand
+        C_expanded = expand(C)
+
+        # Process terms to create the structured tuples
+        result = []
+        for term in C_expanded.as_ordered_terms():
+            coef, rest = term.as_coeff_mul()
+
+            # Collect all numeric factors into coefficient
+            symbolic_factors = []
+            for factor in rest:
+                if factor.is_number:
+                    coef *= factor
+                else:
+                    symbolic_factors.append(factor)
+
+            # Expand powers
+            expanded_symbols = []
+            for factor in symbolic_factors:
+                if isinstance(factor, sp.Pow) and factor.exp.is_Integer:
+                    expanded_symbols.extend([factor.base] * int(factor.exp))
+                else:
+                    expanded_symbols.append(factor)
+
+            # Create result tuple with numeric coefficient first
+            result_tuple = (coef,) + tuple(expanded_symbols)
+            result.append(result_tuple)
+
+        return tuple(result)
+
+    @staticmethod
+    def dmatval_do_not_store_looping_pattern(Cni, Anv, xb):
+        elm = 0.0
+        bv_index_map = {element: idx for idx, element in enumerate(xb)}
+        for i in Cni:
+            elm += tools.wick_out_do_not_store_looping_pattern(i,bv_index_map,Anv)
+        return elm
+
+    def calculate_density_operator_old(self, nvec):
+        """
+        Arguments
+        - lamvec: The vector of lambda_i's
+        - nAnv: The numerical inverse of the A matrix
+        Output
+        - The numerical complete spin density matrix
+        """
+        if self.status == 0:
+            self.run()
+
+        lmat = 4  # Number of modes for our system
+        mat = np.zeros((lmat, lmat), dtype=np.complex128)
+
+        # Set the A matrix
+        self.calculate_loss_matrix_fid()
+        self.calculate_k_function_matrix()
+        nA = self.results["k_function_matrix"] + self.results["loss_bsm_matrix"]
+        nAnv = np.linalg.inv(nA)
+
+
+
+        for i in tqdm(range(lmat)):
+            for j in tqdm(range(lmat)):
+                mat[i, j] = SIGSAG_BS.dmijZ(i, j, nAnv, nvec, self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+        self.results["output_state"] = mat # This is the unnormalized density matrix
+
+    @staticmethod
+    def dmijZ_old(dmi, dmj, nAinv, nvec, eta_t, eta_d):
+        """
+        Arguments:
+        - nAinv: The numerical inverse of the A matrix
+        - lamvec: The vectors of lambdas for the system
+        - dmi: The row number for the cooresponding density matrix element
+        - dmj: The collumn number for the cooresponding density matrix element
+
+        Output:
+        - The density matrix element for the ZALM source
+        """
+
+        mds = 6 # Number of modes for our system
+
+        # First, define our basis vector which cooresponds to the A matrix
+        x = ZALM.basisvZ(mds)
+
+        # Define the matrix element
+        Cn = SIGSAG_BS.moment_vector_with_memory(dmi, dmj, nvec, eta_t, eta_d)
+
+        return SIGSAG_BS.dmatval(Cn, nAinv, x)
+
+    @staticmethod
+    def dmatval_old(Cni, Anv, xb):
+        elm = 0
+        for i in Cni:
+            a = tools.wick_coupling_mat(i,xb)
+            elm += tools.wick_out(a, Anv)
+        return elm
+
+    @staticmethod
+    def moment_vector_with_memory_old(dmi, dmj, nvec, eta_t, eta_d):
+        """
+        Arguments
+        - lambda_vector: The vector of lambda_i's
+        - dmi: The row cooresponding to the density matrix element of interest
+        - dmj: The collumn cooresponding to the density matrix element of interest
+        Output
+        - An array of all of the moments that are to be calculated
+
+        *Presently, this only works for the cascaded source
+        TODO : Rename variables
+        """
+        mds = 6  # Number of modes for our system
+
+        # For the number of modes desired, create a vector of (q/p)_{\alphas / \beta}'s
+        qai = [sp.symbols("qa{}".format(i)) for i in range(1, mds + 1)]
+        pai = [sp.symbols("pa{}".format(i)) for i in range(1, mds + 1)]
+        qbi = [sp.symbols("qb{}".format(i)) for i in range(1, mds + 1)]
+        pbi = [sp.symbols("pb{}".format(i)) for i in range(1, mds + 1)]
+
+        # Define the alpha and beta vectors
+        alp = []
+        bet = []
+        j = 0
+        while j < mds:
+            alp.append((1 / np.sqrt(2)) * (qai[j] + sp.I * pai[j]))
+            bet.append(
+                (1 / np.sqrt(2)) * (qbi[j] - sp.I * pbi[j])
+            )  # We have already taken the complex conjugate
+            j += 1
+
+        etav = np.array([eta_d, eta_d, eta_t, eta_t, eta_t, eta_t])
+
+
+        if dmi == 0:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        elif dmi == 1:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        elif dmi == 2:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        elif dmi == 3:
+            Ca1 = ((alp[2]*np.sqrt(etav[2]) + alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Ca2 = ((alp[2]*np.sqrt(etav[2]) - alp[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Ca3 = ((alp[4]*np.sqrt(etav[4]) + alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Ca4 = ((alp[4]*np.sqrt(etav[4]) - alp[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Ca = Ca1*Ca2*Ca3*Ca4
+        else:
+            Ca = 1
+
+        if dmj == 0:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        elif dmj == 1:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        elif dmj == 2:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        elif dmj == 3:
+            Cb1 = ((bet[2]*np.sqrt(etav[2]) + bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[2])
+            Cb2 = ((bet[2]*np.sqrt(etav[2]) - bet[3]*np.sqrt(etav[3]))/(np.sqrt(2)))**(nvec[3])
+            Cb3 = ((bet[4]*np.sqrt(etav[4]) + bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[4])
+            Cb4 = ((bet[4]*np.sqrt(etav[4]) - bet[5]*np.sqrt(etav[5]))/(np.sqrt(2)))**(nvec[5])
+            Cb = Cb1*Cb2*Cb3*Cb4
+        else:
+            Cb = 1
+
+        C1 = (alp[0]*bet[0]*etav[0])**(nvec[0])/math.factorial(nvec[0])
+        C2 = (alp[1]*bet[1]*etav[1])**(nvec[1])/math.factorial(nvec[1])
+        C = C1*C2*Ca*Cb
+
+        ## The old Approach
+
+        # # Currently only set up for the single-zalm case
+        # ms = ZALM.mcomb(2)
+
+        # # Presently, this only works for the 2 schmidt coefficient case
+        # Ca = alp[2]*alp[3]*(alp[0] - ((-1)**(ms[dmi][0]))*alp[1])*(alp[6] - ((-1)**(ms[dmi][1]))*alp[7])
+        # Cb = bet[2]*bet[3]*(bet[0] - ((-1)**(ms[dmj][0]))*bet[1])*(bet[6] - ((-1)**(ms[dmj][1]))*bet[7])
+        # C = Ca*Cb
+
+        # Seperating the coefficients in a way that can be used by the Wick coupling function
+        C = sp.expand(C)
+        Cv = C.as_ordered_terms()
+
+        # Change the format just slightly
+        Cout = []
+        i = 0
+        while i < len(Cv):
+            Cout.append(Cv[i].as_ordered_factors())
+            i += 1
+
+        # Doing a little bit extra to handle the powers
+        Coutf = []
+        for i in Cout:
+            # print(i)
+            Coutf.append(tools.expand_powers_to_symbols(i))
+
+        return Coutf
+
+    @staticmethod
+    def generate_multidimensional_density_operator_database_parallel(
+        mu_values, eta_t_values, eta_d_values, dark_counts=0,
+        filename="multidim_density_operator_database.hkl", n_jobs=-1):
+        """
+        Generate a multidimensional database of density operators scanning over multiple parameters.
+        Parallelized implementation using joblib.
+
+        Arguments:
+        - mu_values: List or array of mean photon numbers
+        - eta_t_values: List or array of transmission efficiencies
+        - eta_d_values: List or array of detection efficiencies
+        - eta_b_values: List or array of BSM efficiencies
+        - dark_counts: Dark count probability (default: 0)
+        - filename: Output filename
+        - n_jobs: Number of parallel jobs to run (-1 for using all cores)
+
+        Returns:
+        - Database path
+        """
+        # Initialize results dictionary
+        results = {
+            "mu_values": mu_values,
+            "eta_t_values": eta_t_values,
+            "eta_d_values": eta_d_values,
+            "dark_counts": dark_counts,
+            # Array shape is (mu, eta_t, eta_d, 4, 4) for the density operator
+            "density_operators": np.zeros((len(mu_values), len(eta_t_values),
+                                        len(eta_d_values), 4, 4), dtype=np.complex128)
+        }
+
+        # Define worker function for parallel processing
+        def process_parameter_combination(params):
+            i, j, k, mu, eta_t, eta_d = params
+
+            # Create source object for this parameter combination
+            obj = SIGSAG_BS()
+            obj.params["mean_photon"] = mu
+            obj.params["outcoupling_efficiency"] = eta_t
+            obj.params["detection_efficiency"] = eta_d
+            obj.params["dark_counts"] = dark_counts
+
+            # Run calculations
+            obj.run()
+            nvec = np.array([1,1,1,0,1,0])
+            obj.calculate_density_operator(nvec)
+
+            # Return results with indices for placement in the array
+            return (i, j, k, obj.results["output_state"])
+
+        # Create list of all parameter combinations
+        param_combinations = [
+            (i, j, k, mu, eta_t, eta_d)
+            for i, mu in enumerate(mu_values)
+            for j, eta_t in enumerate(eta_t_values)
+            for k, eta_d in enumerate(eta_d_values)
+        ]
+
+        # Calculate total iterations for progress display
+        total_combinations = len(param_combinations)
+
+        # Run calculations in parallel with progress bar
+        with tqdm(total=total_combinations, desc="Calculating density operators") as pbar:
+            # Define callback to update progress bar
+            def update_pbar(*args):
+                pbar.update(1)
+
+            # Process all parameter combinations in parallel
+            parallel_results = Parallel(n_jobs=n_jobs, verbose=0)(
+                delayed(process_parameter_combination)(params)
+                for params in param_combinations
+            )
+
+            # Update progress bar after each batch (if joblib doesn't support callbacks directly)
+            pbar.update(total_combinations)
+
+        # Fill results array with computed values
+        for i, j, k, density_op in parallel_results:
+            results["density_operators"][i, j, k, :, :] = density_op
+
+        # Save results
+        hkl.dump(results, filename)
+        print(f"Multidimensional density operator database saved to {filename}")
+        return filename
+
+    """
+    Defining helper functions that are used
+    """
+    @staticmethod
+    def spdc_covar(mu):
+        # Ordering qpqp
+        # Mode swap for polarization entnaglement
+        permutation_indices = [0, 1, 6, 7, 4, 5, 2, 3]
+        permute_matrix = tools.permutation_matrix(permutation_indices)
+        return (
+            permute_matrix
+            @ block_diag(TMSV.tmsv_covar(mu), TMSV.tmsv_covar(mu))
+            @ np.transpose(permute_matrix)
+        )
+
+    @staticmethod
+    def vac_covar(N):
+        """
+        Covariance matrix for the vacuum state with N modes
+        """
+        return (1/2) * np.eye(2 * N)
+
+    @staticmethod
+    def moment_vector_tuple(nvec1, nvec2, etat, etad):
+        """
+        Arguments
+        - lambda_vector: The vector of lambda_i's
+        - dmi: The row cooresponding to the density matrix element of interest
+        - dmj: The collumn cooresponding to the density matrix element of interest
+        Output
+        - An array of all of the moments that are to be calculated
+
+        *Presently, this only works for the cascaded source
+        TODO : Rename variables
+        """
+        mds = 6  # Number of modes for our system
+
+        # For the number of modes desired, create a vector of (q/p)_{\alphas / \beta}'s
+        qai = [sp.symbols("qa{}".format(i)) for i in range(1, mds + 1)]
+        pai = [sp.symbols("pa{}".format(i)) for i in range(1, mds + 1)]
+        qbi = [sp.symbols("qb{}".format(i)) for i in range(1, mds + 1)]
+        pbi = [sp.symbols("pb{}".format(i)) for i in range(1, mds + 1)]
+
+        # Define the alpha and beta vectors
+        alp = []
+        bet = []
+        j = 0
+        while j < mds:
+            alp.append((1 / np.sqrt(2)) * (qai[j] + sp.I * pai[j]))
+            bet.append(
+                (1 / np.sqrt(2)) * (qbi[j] - sp.I * pbi[j])
+            )  # We have already taken the complex conjugate
+            j += 1
+
+        # First, the coefficients for the signal modes, which will always be detecting one photon
+        Ca12 = np.sqrt(etad) * alp[0] * np.sqrt(etad) * alp[1]
+        Cb12 = np.sqrt(etad) * bet[0] * np.sqrt(etad) * bet[1]
+
+        # Next, the coefficients for the idler modes
+        Ca3 = (((alp[2]*np.sqrt(etat))**(nvec1[0]))/(np.sqrt(math.factorial(nvec1[0]))))
+        Cb3 = (((bet[2]*np.sqrt(etat))**(nvec2[0]))/(np.sqrt(math.factorial(nvec2[0]))))
+
+        Ca4 = (((alp[3]*np.sqrt(etat))**(nvec1[1]))/(np.sqrt(math.factorial(nvec1[1]))))
+        Cb4 = (((bet[3]*np.sqrt(etat))**(nvec2[1]))/(np.sqrt(math.factorial(nvec2[1]))))
+
+        Ca5 = (((alp[4]*np.sqrt(etat))**(nvec1[2]))/(np.sqrt(math.factorial(nvec1[2]))))
+        Cb5 = (((bet[4]*np.sqrt(etat))**(nvec2[2]))/(np.sqrt(math.factorial(nvec2[2]))))
+
+        Ca6 = (((alp[5]*np.sqrt(etat))**(nvec1[3]))/(np.sqrt(math.factorial(nvec1[3]))))
+        Cb6 = (((bet[5]*np.sqrt(etat))**(nvec2[3]))/(np.sqrt(math.factorial(nvec2[3]))))
+
+        C = (Ca12 * Ca3 * Ca4 * Ca5 * Ca6)*(Cb12 * Cb3 * Cb4 * Cb5 * Cb6)
+
+        # Convert polynomial expression to regular expression and expand
+        C_expanded = expand(C)
+
+        # Process terms to create the structured tuples
+        result = []
+        for term in C_expanded.as_ordered_terms():
+            coef, rest = term.as_coeff_mul()
+
+            # Collect all numeric factors into coefficient
+            symbolic_factors = []
+            for factor in rest:
+                if factor.is_number:
+                    coef *= factor
+                else:
+                    symbolic_factors.append(factor)
+
+            # Expand powers
+            expanded_symbols = []
+            for factor in symbolic_factors:
+                if isinstance(factor, sp.Pow) and factor.exp.is_Integer:
+                    expanded_symbols.extend([factor.base] * int(factor.exp))
+                else:
+                    expanded_symbols.append(factor)
+
+            # Create result tuple with numeric coefficient first
+            result_tuple = (coef,) + tuple(expanded_symbols)
+            result.append(result_tuple)
+
+        return tuple(result)
+
+    @staticmethod
+    def moment_vector(nvec1, nvec2, etat, etad):
+        """
+        Arguments
+        - lambda_vector: The vector of lambda_i's
+        - dmi: The row cooresponding to the density matrix element of interest
+        - dmj: The collumn cooresponding to the density matrix element of interest
+        Output
+        - An array of all of the moments that are to be calculated
+
+        *Presently, this only works for the cascaded source
+        TODO : Rename variables
+        """
+        mds = 6  # Number of modes for our system
+
+        # For the number of modes desired, create a vector of (q/p)_{\alphas / \beta}'s
+        qai = [sp.symbols("qa{}".format(i)) for i in range(1, mds + 1)]
+        pai = [sp.symbols("pa{}".format(i)) for i in range(1, mds + 1)]
+        qbi = [sp.symbols("qb{}".format(i)) for i in range(1, mds + 1)]
+        pbi = [sp.symbols("pb{}".format(i)) for i in range(1, mds + 1)]
+
+        # Define the alpha and beta vectors
+        alp = []
+        bet = []
+        j = 0
+        while j < mds:
+            alp.append((1 / np.sqrt(2)) * (qai[j] + sp.I * pai[j]))
+            bet.append(
+                (1 / np.sqrt(2)) * (qbi[j] - sp.I * pbi[j])
+            )  # We have already taken the complex conjugate
+            j += 1
+
+        # First, the coefficients for the signal modes, which will always be detecting one photon
+        Ca12 = np.sqrt(etad) * alp[0] * np.sqrt(etad) * alp[1]
+        Cb12 = np.sqrt(etad) * bet[0] * np.sqrt(etad) * bet[1]
+
+        # Next, the coefficients for the idler modes
+        Ca3 = (((alp[2]*np.sqrt(etat))**(nvec1[0]))/(np.sqrt(math.factorial(nvec1[0]))))
+        Cb3 = (((bet[2]*np.sqrt(etat))**(nvec2[0]))/(np.sqrt(math.factorial(nvec2[0]))))
+
+        Ca4 = (((alp[3]*np.sqrt(etat))**(nvec1[1]))/(np.sqrt(math.factorial(nvec1[1]))))
+        Cb4 = (((bet[3]*np.sqrt(etat))**(nvec2[1]))/(np.sqrt(math.factorial(nvec2[1]))))
+
+        Ca5 = (((alp[4]*np.sqrt(etat))**(nvec1[2]))/(np.sqrt(math.factorial(nvec1[2]))))
+        Cb5 = (((bet[4]*np.sqrt(etat))**(nvec2[2]))/(np.sqrt(math.factorial(nvec2[2]))))
+
+        Ca6 = (((alp[5]*np.sqrt(etat))**(nvec1[3]))/(np.sqrt(math.factorial(nvec1[3]))))
+        Cb6 = (((bet[5]*np.sqrt(etat))**(nvec2[3]))/(np.sqrt(math.factorial(nvec2[3]))))
+
+        C = (Ca12 * Ca3 * Ca4 * Ca5 * Ca6)*(Cb12 * Cb3 * Cb4 * Cb5 * Cb6)
+
+        # Seperating the coefficients in a way that can be used by the Wick coupling function
+        C = sp.expand(C)
+        Cv = C.as_ordered_terms()
+
+        # Change the format just slightly
+        Cout = []
+        i = 0
+        while i < len(Cv):
+            Cout.append(Cv[i].as_ordered_factors())
+            i += 1
+
+        # Doing a little bit extra to handle the powers
+        Coutf = []
+        for i in Cout:
+            # print(i)
+            Coutf.append(tools.expand_powers_to_symbols(i))
+
+        return Coutf
+
+    """
+    Analysis Functions
+    """
+
+    def calculate_probability_success_loadable_1(self):
+        mds = 6  # Number of modes for our system
+
+        # First, define our basis vector
+        x = ZALM.basisvZ(mds)  # Because we corrected the basis vector of our covariance matrix, we need to use a different basis vector for the Wick coupling
+
+        # The loss matrix will be unique for calculating the probability of generation
+        self.calculate_loss_bsm_matrix_pgen_loadable_1()
+        self.calculate_k_function_matrix()
+
+        nA = (self.results["k_function_matrix"] + self.results["loss_bsm_matrix"])
+        Gam = self.results["Gamma"]
+
+        N1 = 1 #((self.params["bsm_efficiency"])**2)
+        D1 = np.sqrt(np.linalg.det(nA))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+        Coef = (N1)/(D1 * D2 * D3)
+
+        C = SIGSAG.moment_vector([0,0,0,0], [0,0,0,0], self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+        self.results["probability_success"] = Coef*tools.W(C,nA,x) #4 * Coef * val(ZALM.moment_vector(self.params["schmidt_coeffs"], 0), nAinv, x)
+
+    def calculate_probability_success_loadable_2(self):
+        mds = 6  # Number of modes for our system
+
+        # First, define our basis vector
+        x = ZALM.basisvZ(mds)  # Because we corrected the basis vector of our covariance matrix, we need to use a different basis vector for the Wick coupling
+
+        # The loss matrix will be unique for calculating the probability of generation
+        self.calculate_loss_bsm_matrix_pgen_loadable_2()
+        self.calculate_k_function_matrix()
+
+        nA = (self.results["k_function_matrix"] + self.results["loss_bsm_matrix"])
+        Gam = self.results["Gamma"]
+
+        N1 = 1 #((self.params["bsm_efficiency"])**2)
+        D1 = np.sqrt(np.linalg.det(nA))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+        Coef = (N1)/(D1 * D2 * D3)
+
+        C = SIGSAG.moment_vector([0,0,0,0], [0,0,0,0], self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+        self.results["probability_success"] = Coef*tools.W(C,nA,x) #4 * Coef * val(ZALM.moment_vector(self.params["schmidt_coeffs"], 0), nAinv, x)
+
+    def calculate_probability_success_loadable_3(self):
+        mds = 6  # Number of modes for our system
+
+        # First, define our basis vector
+        x = ZALM.basisvZ(mds)  # Because we corrected the basis vector of our covariance matrix, we need to use a different basis vector for the Wick coupling
+
+        # The loss matrix will be unique for calculating the probability of generation
+        self.calculate_loss_bsm_matrix_pgen_loadable_3()
+        self.calculate_k_function_matrix()
+
+        nA = (self.results["k_function_matrix"] + self.results["loss_bsm_matrix"])
+        Gam = self.results["Gamma"]
+
+        N1 = 1 #((self.params["bsm_efficiency"])**2)
+        D1 = np.sqrt(np.linalg.det(nA))
+        D2 = (np.linalg.det(Gam))**(0.25)
+        D3 = (np.linalg.det(np.conjugate(Gam)))**(0.25)
+        Coef = (N1)/(D1 * D2 * D3)
+
+        C = SIGSAG.moment_vector([0,0,0,0], [0,0,0,0], self.params["outcoupling_efficiency"], self.params["detection_efficiency"])
+
+        self.results["probability_success"] = Coef*tools.W(C,nA,x) #4 * Coef * val(ZALM.moment_vector(self.params["schmidt_coeffs"], 0), nAinv, x)
+
+    def calc_loadable_probability(self):
+        self.run()
+        self.calculate_probability_success()
+        a = self.results['probability_success']
+        self.calculate_probability_success_loadable_1()
+        b = self.results['probability_success']
+        self.calculate_probability_success_loadable_2()
+        c = self.results['probability_success']
+        self.calculate_probability_success_loadable_3()
+        d = self.results['probability_success']
+        self.results['loadable_probability'] = (a-b-c+d)/a
+
+    def calc_bell_state_purity(self):
+        self.run()
+        self.calculate_fidelity()
+        self.calc_loadable_probability()
+        self.results["bell_state_purity"] = self.results['fidelity']/self.results['loadable_probability']

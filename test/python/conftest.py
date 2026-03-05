@@ -150,12 +150,11 @@ def zalm_py(zalm_test_case_rand: dict) -> gqpy.ZALM:
 def zalm_jl(zalm_test_case_rand: dict) -> gqjl.ZALM:
     return gqjl.ZALM().set(**zalm_test_case_rand)
 
-if gqpy._GENQO_OLD_DEV:
-    @pytest.fixture
-    def sigsag_py(sigsag_test_case_rand: dict) -> gqpy.SIGSAG_BS:
-        sigsag = gqpy.SIGSAG_BS()
-        sigsag.params.update(sigsag_test_case_rand)
-        return sigsag
+@pytest.fixture
+def sigsag_py(sigsag_test_case_rand: dict) -> gqpy.SIGSAG_BS:
+    sigsag = gqpy.SIGSAG_BS()
+    sigsag.params.update(sigsag_test_case_rand)
+    return sigsag
 
 @pytest.fixture
 def sigsag_jl(sigsag_test_case_rand: dict) -> gqjl.SIGSAG:
