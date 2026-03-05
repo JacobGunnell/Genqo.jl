@@ -1,8 +1,4 @@
-# Genqo.jl: Entanglement Source Modeling in Python and Julia
-
-To cite Genqo, please use this DOI:
-
-[![DOI](https://zenodo.org/badge/1033395257.svg)](https://doi.org/10.5281/zenodo.17214019)
+# Genqo.jl: A Gaussian State Quantum Optics Modeling Engine
 
 **Contents**
 - [Why Genqo?](#why-genqo)
@@ -14,17 +10,17 @@ Genqo is an open-source tool for modeling quantum entanglement sources such as S
 
 <div align="center">
 
-![Comparison of the hybrid ZALM model to analytical models using the low mean photon number approximation. Divergence of hybrid model from truncated models is evident after Ns = 0.2.](assets/images/zalmloss.svg)
+![Comparison of the hybrid ZALM model to analytical models using the low mean photon number approximation. Divergence of hybrid model from truncated models is evident after Ns = 0.2.](assets/images/genqo_vs_perturbative.svg)
 
 *Comparison of the hybrid ZALM model to analytical models using the low mean photon number approximation. Divergence of hybrid model from truncated models is evident after Ns = 0.2.*
 
 </div>
 
-Genqo allows for calculation of performance metrics such as entanglement rate, fidelity, and full density operators while sweeping mean photon number, dark counts, and various device and transmission losses. Thanks to Julia's JIT compilation feature, these metrics can be computed up to three orders of magnitude (140-1000x) faster than in Genqo's original Python implementation.
+Genqo allows for calculation of performance metrics such as entanglement rate, fidelity, and full density operators while sweeping mean photon number, dark counts, and various device and transmission losses. Thanks to Julia's JIT compilation feature, these metrics can be computed up to three orders of magnitude (115-1000x) faster than in Genqo's original Python implementation.
 
 <div align="center">
 
-![Comparison of Genqo benchmarks before and after moving to Julia implementation.](assets/images/genqo_speedups.png)
+![Comparison of Genqo benchmarks before and after moving to Julia implementation.](assets/images/benchmark_comparison.svg)
 
 *Comparison of Genqo benchmarks before and after moving to Julia implementation.*
 
