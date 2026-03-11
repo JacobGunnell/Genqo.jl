@@ -60,6 +60,7 @@ BeamSplitter(t::Real=0.5)::Linear2QubitGate = Linear2QubitGate(
 
 # TODO: add φ parameter
 Squeeze2Mode(r::Real, φ::Real=0)::Linear2QubitGate = Linear2QubitGate(
+    1/sqrt(2) * 
     [
         cosh(r)  sinh(r)  0         0        ;
         sinh(r)  cosh(r)  0         0        ;
